@@ -1,0 +1,11 @@
+.container {
+  min-height: 100vh;
+  background-color: #F2F3F7; /* Sesuai Background Gambar */
+  font-family: 'Inter', sans-serif; /* Pastikan font mirip */
+}
+
+.mainContent {
+  margin-left: 260px; /* Memberi ruang untuk sidebar fixed */
+  padding: 40px;
+  width: calc(100% - 260px);
+}

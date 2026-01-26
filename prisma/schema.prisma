@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+// CUKUP SATU SAJA DI SINI
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL") // Opsional, bagus untuk Prisma v7
+}
+
+model tb_transaksi {
+  id_parkir      Int            @id @default(autoincrement())
+  plat_nomor     String         @db.VarChar(20)
+  id_tarif       Int
+  id_user        Int            // Petugas yang melayani
+  id_area        Int            // Area parkir
+  waktu_masuk    DateTime       @default(now())
+  waktu_keluar   DateTime?
+  biaya_total    Decimal?       @db.Decimal(10, 0)
+  status         String         @default("masuk") @db.VarChar(20)
+   
+  // Relasi
+  tb_tarif       tb_tarif       @relation(fields: [id_tarif], references: [id_tarif])
+  tb_user        tb_user        @relation(fields: [id_user], references: [id_user])
+  tb_area_parkir tb_area_parkir @relation(fields: [id_area], references: [id_area])
+}
+
+model tb_area_parkir {
+  id_area      Int            @id @default(autoincrement())
+  nama_area    String         @db.VarChar(50)
+  kapasitas    Int
+  terisi       Int?           @default(0)
+   
+  // Relasi balik
+  tb_transaksi tb_transaksi[]
+}
+
+model tb_tarif {
+  id_tarif        Int            @id @default(autoincrement())
+  jenis_kendaraan String         @db.VarChar(20)
+  tarif_per_jam   Decimal        @db.Decimal(10, 0)
+   
+  tb_transaksi    tb_transaksi[]
+}
+
+model tb_user {
+  id_user          Int                @id @default(autoincrement())
+  nama_lengkap     String             @db.VarChar(50)
+  username         String             @unique @db.VarChar(50)
+  password         String             @db.VarChar(100)
+  status_aktif     Int?               @default(1) @db.SmallInt
+  role             user_role          @default(petugas)
+   
+  // Relasi Balik
+  tb_transaksi     tb_transaksi[]
+  tb_kendaraan     tb_kendaraan[]
+  tb_log_aktivitas tb_log_aktivitas[]
+}
+
+model tb_kendaraan {
+  id_kendaraan    Int       @id @default(autoincrement())
+  plat_nomor      String    @unique @db.VarChar(15)
+  jenis_kendaraan String    @db.VarChar(20)
+  warna           String?   @db.VarChar(20)
+  pemilik         String?   @db.VarChar(100)
+  id_user         Int?      
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+    
+  tb_user         tb_user?  @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model tb_log_aktivitas {
+  id_log          Int       @id @default(autoincrement())
+  id_user         Int
+  aktivitas       String    @db.VarChar(100)
+  waktu_aktivitas DateTime? @default(now()) @db.Timestamp(6)
+
+  tb_user         tb_user   @relation(fields: [id_user], references: [id_user], onDelete: Cascade, onUpdate: NoAction)
+}
+
+enum user_role {
+  admin
+  petugas
+  owner
+}

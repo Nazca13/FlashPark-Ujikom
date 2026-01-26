@@ -1,0 +1,17 @@
+.btnPrimary {
+  width: 100%;
+  height: 48px;
+  background-color: #204DD2;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-top: 10px;
+}
+
+.btnPrimary:hover {
+  background-color: #1a3fb0;
+}
