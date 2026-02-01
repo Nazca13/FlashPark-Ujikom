@@ -1,0 +1,149 @@
+.pageTitle {
+  font-size: 28px;
+  font-weight: bold;
+  color: #1A1A1A;
+  margin-bottom: 30px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.cardContainer {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  padding: 24px;
+}
+
+/* Table Styling */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: 16px;
+  border-bottom: 1px solid #1A1A1A;
+  color: #1F2937;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.table td {
+  padding: 20px 16px;
+  border-bottom: 1px solid #F3F4F6;
+  color: #1F2937;
+  font-size: 14px;
+}
+
+/* Filter Section */
+.filterRow {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+.input {
+  height: 44px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+  color: #1F2937;
+  background-color: white;
+}
+
+.searchContainer {
+  position: relative;
+  width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9CA3AF;
+  pointer-events: none;
+}
+
+/* --- Tambahkan ini di bawah file Dashboard.module.css kamu --- */
+
+/* Tombol Biru (Simpan/Tambah) */
+.btnPrimary {
+  background-color: #204DD2;
+  color: white;
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnPrimary:hover {
+  background-color: #1a3fb0;
+}
+
+/* Tombol Merah (Hapus) */
+.btnDanger {
+  background-color: #FEE2E2;
+  color: #DC2626;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnDanger:hover {
+  background-color: #FECACA;
+}
+
+/* Badge (Label Role/Status) */
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badgeBlue {
+  background: #DBEAFE;
+  color: #1E40AF;
+}
+
+/* Admin */
+.badgeGreen {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+/* Petugas */

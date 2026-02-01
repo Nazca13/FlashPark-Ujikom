@@ -1,98 +1,79 @@
-import Link from 'next/link';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { getUsers, deleteUser } from './actions';
-import styles from './page.module.css';
+import styles from "../admin.module.css";
+import prisma from "@/lib/prisma";
+import { createUser, deleteUser } from "../actions";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
-/**
- * Halaman Data Admin Users
- * Menampilkan daftar user yang terdaftar dalam sistem.
- */
 export default async function UsersPage() {
-  const users = await getUsers();
+  const users = await prisma.tb_user.findMany({ orderBy: { id_user: 'desc' } });
 
   return (
     <DashboardLayout activePage="Data User">
-      <h1 className={styles.pageTitle}>Data User</h1>
+      <h1 className={styles.pageTitle}>Kelola Pengguna</h1>
 
+      {/* FORM TAMBAH USER */}
+      <div className={styles.cardContainer} style={{ marginBottom: '30px' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px' }}>+ Tambah User Baru</h3>
+        <form action={createUser} className={styles.filterRow} style={{ alignItems: 'flex-end' }}>
+
+          <div className={styles.filterGroup} style={{ flex: 2 }}>
+            <label className={styles.label}>Nama Lengkap</label>
+            <input name="nama" className={styles.input} placeholder="Contoh: Budi Santoso" required />
+          </div>
+
+          <div className={styles.filterGroup} style={{ flex: 1 }}>
+            <label className={styles.label}>Username</label>
+            <input name="username" className={styles.input} placeholder="user123" required />
+          </div>
+
+          <div className={styles.filterGroup} style={{ flex: 1 }}>
+            <label className={styles.label}>Password</label>
+            <input name="password" type="password" className={styles.input} placeholder="******" required />
+          </div>
+
+          <div className={styles.filterGroup} style={{ flex: 1 }}>
+            <label className={styles.label}>Role</label>
+            <select name="role" className={styles.input} style={{ background: 'white' }}>
+              <option value="petugas">Petugas</option>
+              <option value="admin">Admin</option>
+              <option value="owner">Owner</option>
+            </select>
+          </div>
+
+          <button type="submit" className={styles.btnPrimary}>Simpan</button>
+        </form>
+      </div>
+
+      {/* TABEL DATA USER */}
       <div className={styles.cardContainer}>
-        {/* Tombol Tambah User */}
-        <div style={{ marginBottom: '24px' }}>
-          <Link href="/dashboard/admin/users/add" style={{
-            background: '#4F46E5',
-            color: 'white',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            textDecoration: 'none',
-            fontWeight: 600,
-            fontSize: '14px'
-          }}>
-            + Tambah User
-          </Link>
-        </div>
-
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>No</th>
+              <th width="50">ID</th>
               <th>Nama Lengkap</th>
               <th>Username</th>
               <th>Role</th>
-              <th>Status</th>
-              <th>Aksi</th>
+              <th style={{ textAlign: 'right' }}>Aksi</th>
             </tr>
           </thead>
           <tbody>
-            {users.length === 0 ? (
-              <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '30px' }}>
-                  Belum ada data user.
+            {users.map((u) => (
+              <tr key={u.id_user}>
+                <td>#{u.id_user}</td>
+                <td>{u.nama_lengkap}</td>
+                <td>{u.username}</td>
+                <td>
+                  <span className={`${styles.badge} ${u.role === 'admin' ? styles.badgeBlue : styles.badgeGreen}`}>
+                    {u.role.toUpperCase()}
+                  </span>
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  <form action={deleteUser}>
+                    <input type="hidden" name="id_user" value={u.id_user} />
+                    <button className={styles.btnDanger}>Hapus</button>
+                  </form>
                 </td>
               </tr>
-            ) : (
-              users.map((user, index) => (
-                <tr key={user.id_user}>
-                  <td>{index + 1}</td>
-                  <td>{user.nama_lengkap}</td>
-                  <td>{user.username}</td>
-                  <td>{user.role}</td>
-                  <td>
-                    <span style={{
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      background: user.status_aktif ? '#DCFCE7' : '#FEE2E2',
-                      color: user.status_aktif ? '#166534' : '#991B1B'
-                    }}>
-                      {user.status_aktif ? 'Aktif' : 'Non-Aktif'}
-                    </span>
-                  </td>
-                  <td>
-                    <div className={styles.actionGroup}>
-                      <Link href={`/dashboard/admin/users/edit/${user.id_user}`}>
-                        <button style={{
-                          background: "#E0F2FE", color: "#0284C7", border: "none",
-                          padding: "6px 12px", borderRadius: "8px", fontSize: "12px",
-                          fontWeight: "600", cursor: "pointer"
-                        }}>
-                          Edit
-                        </button>
-                      </Link>
-
-                      <form action={deleteUser}>
-                        <input type="hidden" name="id" value={user.id_user} />
-                        <button type="submit" style={{
-                          background: "#FEE2E2", color: "#B91C1C", border: "none",
-                          padding: "6px 12px", borderRadius: "8px", fontSize: "12px",
-                          fontWeight: "600", cursor: "pointer"
-                        }}>
-                          Hapus
-                        </button>
-                      </form>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
+            ))}
           </tbody>
         </table>
       </div>

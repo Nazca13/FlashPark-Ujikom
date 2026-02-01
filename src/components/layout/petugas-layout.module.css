@@ -1,0 +1,74 @@
+/* Copy dari DashboardLayout.module.css untuk konsistensi */
+.container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #F9FAFB;
+}
+
+.sidebar {
+  width: 260px;
+  background: white;
+  border-right: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.logoArea {
+  padding: 30px 20px;
+  border-bottom: 1px solid #E5E7EB;
+  text-align: center;
+}
+
+.menuGroup {
+  flex: 1;
+  padding: 20px 0;
+}
+
+.menuTitle {
+  padding: 0 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  margin: 4px 16px;
+  border-radius: 8px;
+  color: #1A1A1A;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.menuItem:hover {
+  background-color: #F3F4F6;
+}
+
+.activeMenu {
+  background-color: #E0F2FE;
+  color: #204DD2;
+  font-weight: 600;
+}
+
+.footer {
+  padding: 20px;
+  border-top: 1px solid #E5E7EB;
+}
+
+.mainContent {
+  flex: 1;
+  margin-left: 260px;
+  padding: 40px;
+  overflow-y: auto;
+}

@@ -1,0 +1,215 @@
+/* Container Utama: Membagi layar jadi 2 kolom (Kiri: Form, Kanan: Info) */
+.container {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    /* Form lebih lebar dikit */
+    gap: 30px;
+}
+
+/* Kartu Putih Standard (Mirip Admin) */
+.card {
+    background: #FFFFFF;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.03);
+    height: fit-content;
+}
+
+/* Judul Section */
+.cardTitle {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1A1A1A;
+    margin-bottom: 24px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+/* Input Plat Nomor (Dibuat Besar & Gagah) */
+.inputPlat {
+    width: 100%;
+    height: 70px;
+    font-size: 32px;
+    font-weight: 800;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    border: 2px solid #E5E7EB;
+    border-radius: 12px;
+    background: #F9FAFB;
+    color: #1F2937;
+    /* Pastikan warna teks gelap */
+    transition: all 0.2s;
+}
+
+.inputPlat:focus {
+    outline: none;
+    border-color: #204DD2;
+    background: #FFF;
+    box-shadow: 0 0 0 4px rgba(32, 77, 210, 0.1);
+}
+
+/* Group Pilihan Kendaraan */
+.vehicleGroup {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* Tombol Pilihan (Radio Button Style) */
+.vehicleOption {
+    flex: 1;
+    cursor: pointer;
+    position: relative;
+}
+
+.vehicleRadio {
+    position: absolute;
+    opacity: 0;
+}
+
+.vehicleCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    border: 2px solid #E5E7EB;
+    border-radius: 12px;
+    color: #9CA3AF;
+    transition: all 0.2s;
+}
+
+/* Efek saat dipilih */
+.vehicleRadio:checked+.vehicleCard {
+    border-color: #204DD2;
+    background: #EFF6FF;
+    /* Biru muda banget */
+    color: #204DD2;
+}
+
+.vehicleIcon {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.vehicleLabel {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.vehiclePrice {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* === STYLE BARU UNTUK CHECKOUT & STRUK === */
+.receiptArea {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    font-family: 'Courier New', Courier, monospace;
+    /* Font struk */
+}
+
+.receiptRow {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #333;
+}
+
+/* Dropdown Area */
+.selectArea {
+    width: 100%;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #E5E7EB;
+    font-size: 16px;
+    margin-top: 20px;
+    background: white;
+    cursor: pointer;
+}
+
+/* Tombol Submit Besar */
+.btnSubmit {
+    width: 100%;
+    margin-top: 30px;
+    padding: 18px;
+    background: #204DD2;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.btnSubmit:hover {
+    background: #1a3fb0;
+}
+
+.btnSubmit:disabled {
+    background: #9CA3AF;
+    cursor: not-allowed;
+}
+
+/* --- BAGIAN KANAN (STATISTIK) --- */
+
+.statCard {
+    background: linear-gradient(135deg, #204DD2 0%, #3B82F6 100%);
+    color: white;
+    border-radius: 16px;
+    padding: 30px;
+    margin-bottom: 25px;
+    box-shadow: 0 10px 25px rgba(32, 77, 210, 0.25);
+}
+
+.statNumber {
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1;
+    margin: 10px 0;
+}
+
+.statLabel {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+/* List History Sederhana */
+.historyItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.historyPlat {
+    font-weight: 700;
+    color: #1F2937;
+}
+
+.historyMeta {
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.badge {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.badgeMasuk {
+    background: #ECFDF5;
+    color: #059669;
+}

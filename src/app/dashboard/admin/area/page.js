@@ -12,7 +12,7 @@
 
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { getArea, createArea } from "./actions";
-import styles from "../DashboardPage.module.css";
+import styles from "../admin.module.css";
 
 /**
  * DataAreaPage - Komponen Halaman Data Area Parkir
