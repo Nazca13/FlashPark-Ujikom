@@ -19,3 +19,19 @@ export async function createArea(formData) {
   });
   revalidatePath("/dashboard/admin/area");
 }
+
+// fungsi toggle status area parkir (aktif/nonaktif)
+export async function toggleAreaStatus(formData) {
+  // ambil id area dan status saat ini
+  const id = parseInt(formData.get("id_area"));
+  const currentStatus = formData.get("is_active") === "true";
+
+  // toggle status (kalo aktif jadi nonaktif, vice versa)
+  await prisma.tb_area_parkir.update({
+    where: { id_area: id },
+    data: { is_active: !currentStatus }
+  });
+
+  // refresh halaman
+  revalidatePath("/dashboard/admin/area");
+}

@@ -1,6 +1,6 @@
-import { PetugasLayout } from "@/components/layout/PetugasLayout";
+import { PetugasLayout } from "@/components/layout/petugas-layout";
 import prisma from "@/lib/prisma";
-import TransactionForm from "./TransactionForm";
+import TransactionForm from "./transaction-form";
 import styles from "./petugas.module.css";
 
 // Agar data selalu fresh saat dibuka (Dynamic Rendering)
@@ -8,14 +8,22 @@ export const dynamic = 'force-dynamic';
 
 export default async function PetugasDashboard() {
     // 1. Ambil Data Master (Tarif & Area)
-    const tarifData = await prisma.tb_tarif.findMany();
-    const areaData = await prisma.tb_area_parkir.findMany();
+    const rawTarifData = await prisma.tb_tarif.findMany();
+    const areaData = await prisma.tb_area_parkir.findMany({
+        where: { is_active: true }
+    });
+
+    // Serialize Decimal (Prisma) ke plain number buat Client Component
+    const tarifData = rawTarifData.map(t => ({
+        ...t,
+        tarif_per_jam: Number(t.tarif_per_jam)
+    }));
 
     // 2. Ambil Data Transaksi Hari Ini (Buat List History di kanan)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const recentTx = await prisma.tb_transaksi.findMany({
+    const rawRecentTx = await prisma.tb_transaksi.findMany({
         where: {
             waktu_masuk: { gte: today } // Transaksi dari jam 00:00 hari ini
         },
@@ -23,6 +31,16 @@ export default async function PetugasDashboard() {
         take: 5,
         include: { tb_tarif: true }
     });
+
+    // Serialize Decimal di recentTx juga biar aman
+    const recentTx = rawRecentTx.map(tx => ({
+        ...tx,
+        biaya_total: tx.biaya_total ? Number(tx.biaya_total) : null,
+        tb_tarif: {
+            ...tx.tb_tarif,
+            tarif_per_jam: Number(tx.tb_tarif.tarif_per_jam)
+        }
+    }));
 
     // 3. Hitung Statistik Sederhana
     const totalKapasitas = areaData.reduce((acc, curr) => acc + curr.kapasitas, 0);
@@ -35,7 +53,7 @@ export default async function PetugasDashboard() {
 
                 {/* KOLOM KIRI: Form Input Utama */}
                 <div className={styles.card}>
-                    <h2 className={styles.cardTitle}>⛔ Kendaraan Masuk</h2>
+                    <h2 className={styles.cardTitle}>Kendaraan Masuk</h2>
                     <TransactionForm
                         tarifList={tarifData}
                         areaList={areaData}

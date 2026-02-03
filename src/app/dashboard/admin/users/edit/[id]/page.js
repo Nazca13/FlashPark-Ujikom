@@ -1,5 +1,5 @@
 import { getUserById, updateUser } from "../../actions"; // Import actions
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { EditForm } from "./EditForm"; // Kita pisah formnya biar rapi
 
 export default async function EditPage({ params }) {

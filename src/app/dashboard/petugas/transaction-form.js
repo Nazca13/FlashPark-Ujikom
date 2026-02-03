@@ -82,7 +82,7 @@ export default function TransactionForm({ tarifList, areaList, userId }) {
 
             {/* 4. TOMBOL SUBMIT */}
             <button type="submit" className={styles.btnSubmit} disabled={loading}>
-                {loading ? "Memproses..." : "Cetak Karcis Masuk 🖨️"}
+                {loading ? "Memproses..." : "Cetak Karcis Masuk"}
             </button>
 
         </form>

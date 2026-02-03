@@ -5,7 +5,8 @@
   flex-direction: column;
   padding: 30px;
   border-right: 1px solid #E5E7EB;
-  position: fixed; /* Agar sidebar tetap diam saat scroll */
+  position: fixed;
+  /* Agar sidebar tetap diam saat scroll */
   height: 100vh;
   left: 0;
   top: 0;
@@ -46,14 +47,15 @@
   padding: 14px 18px;
   border-radius: 12px;
   text-decoration: none;
-  color: #4B5563; /* Abu-abu gelap */
+  color: #4B5563;
+  /* Abu-abu gelap */
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background-color: transparent;
 }
 
 .menuItem:hover {
-  background-color: #F9FAFB;
+  transform: translateX(4px);
 }
 
 /* Menu Item Active (Biru) */

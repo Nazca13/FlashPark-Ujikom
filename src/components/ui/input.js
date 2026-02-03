@@ -1,4 +1,4 @@
-import styles from './Input.module.css';
+import styles from './input.module.css';
 
 export const Input = ({ label, type = "text", ...props }) => (
   <div className={styles.inputGroup}>

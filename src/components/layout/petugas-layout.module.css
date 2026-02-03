@@ -48,17 +48,19 @@
   text-decoration: none;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: transparent;
 }
 
 .menuItem:hover {
-  background-color: #F3F4F6;
+  transform: translateX(4px);
 }
 
 .activeMenu {
-  background-color: #E0F2FE;
-  color: #204DD2;
+  background-color: #204DD2;
+  color: #FFFFFF;
   font-weight: 600;
+  box-shadow: 0 4px 12px rgba(32, 77, 210, 0.25);
 }
 
 .footer {

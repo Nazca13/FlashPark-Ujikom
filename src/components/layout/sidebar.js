@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import styles from './Sidebar.module.css';
+import styles from './sidebar.module.css';
 import { logoutAction } from "@/app/login/actions";
 
 export const Sidebar = ({ activePage }) => {

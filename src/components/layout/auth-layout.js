@@ -1,5 +1,5 @@
 import Image from "next/image";
-import styles from './AuthLayout.module.css';
+import styles from './auth-layout.module.css';
 
 export const AuthLayout = ({ children }) => (
     <div className={styles.container}>

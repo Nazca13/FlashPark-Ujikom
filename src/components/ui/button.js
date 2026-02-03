@@ -1,4 +1,4 @@
-import styles from './Button.module.css';
+import styles from './button.module.css';
 
 // Perhatikan kata "export" di depan const
 export const Button = ({ children, type = "button", ...props }) => (

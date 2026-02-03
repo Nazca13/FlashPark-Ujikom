@@ -10,10 +10,15 @@
   },
   "dependencies": {
     "@prisma/adapter-pg": "^5.10.2",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.1.0",
+    "jspdf-autotable": "^5.0.7",
     "next": "16.1.1",
     "pg": "^8.17.2",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "react-to-print": "^3.2.0",
+    "recharts": "^3.7.0"
   },
   "devDependencies": {
     "@prisma/client": "^5.10.2",

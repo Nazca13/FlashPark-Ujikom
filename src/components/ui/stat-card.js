@@ -1,5 +1,5 @@
 import Image from "next/image";
-import styles from './StatCard.module.css';
+import styles from './stat-card.module.css';
 
 export const StatCard = ({ title, value, iconPath }) => {
   return (

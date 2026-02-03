@@ -1,7 +1,7 @@
 import styles from "../admin.module.css";
 import prisma from "@/lib/prisma";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { LogsFilter } from "./LogsFilter";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { LogsFilter } from "./logs-filter";
 
 export default async function LogsPage({ searchParams }) {
     const params = await searchParams;

@@ -10,8 +10,8 @@
  * ============================================================================
  */
 
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { getArea, createArea } from "./actions";
+import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { getArea, createArea, toggleAreaStatus } from "./actions";
 import styles from "../admin.module.css";
 
 /**
@@ -170,13 +170,15 @@ export default async function DataAreaPage() {
                             <th>Kapasitas</th>
                             <th>Terisi</th>
                             <th>Tersedia</th>
-                            <th>Status</th>
+                            <th>Status Kapasitas</th>
+                            <th>Status Aktif</th>
+                            <th style={{ textAlign: 'right' }}>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
                         {areaList.length === 0 ? (
                             <tr>
-                                <td colSpan="6" style={{ textAlign: "center" }}>
+                                <td colSpan="9" style={{ textAlign: "center" }}>
                                     Belum ada data area parkir.
                                 </td>
                             </tr>
@@ -219,6 +221,32 @@ export default async function DataAreaPage() {
                                             }}>
                                                 {statusText} ({persen}%)
                                             </span>
+                                        </td>
+                                        <td>
+                                            {/* Status Aktif/Nonaktif */}
+                                            <span style={{
+                                                background: item.is_active ? "#10B98120" : "#6B728020",
+                                                color: item.is_active ? "#10B981" : "#6B7280",
+                                                padding: "4px 12px",
+                                                borderRadius: "20px",
+                                                fontSize: "12px",
+                                                fontWeight: "600"
+                                            }}>
+                                                {item.is_active ? "Aktif" : "Nonaktif"}
+                                            </span>
+                                        </td>
+                                        <td style={{ textAlign: 'right' }}>
+                                            {/* Tombol Toggle Status */}
+                                            <form action={toggleAreaStatus} style={{ display: 'inline' }}>
+                                                <input type="hidden" name="id_area" value={item.id_area} />
+                                                <input type="hidden" name="is_active" value={item.is_active} />
+                                                <button
+                                                    className={item.is_active ? styles.btnDanger : styles.btnPrimary}
+                                                    style={{ fontSize: '12px', padding: '6px 12px' }}
+                                                >
+                                                    {item.is_active ? "Nonaktifkan" : "Aktifkan"}
+                                                </button>
+                                            </form>
                                         </td>
                                     </tr>
                                 );

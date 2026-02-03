@@ -213,3 +213,183 @@
     background: #ECFDF5;
     color: #059669;
 }
+
+/* === REFINED CHECKOUT LAYOUT === */
+.checkoutGrid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 40px;
+    align-items: start;
+}
+
+.leftSide,
+.rightSide {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Parked Vehicles List */
+.parkedList {
+    height: 600px;
+    overflow-y: auto;
+    padding-right: 10px;
+    margin-top: 15px;
+}
+
+.parkedList::-webkit-scrollbar {
+    width: 6px;
+}
+
+.parkedList::-webkit-scrollbar-thumb {
+    background-color: #E5E7EB;
+    border-radius: 10px;
+}
+
+.parkedItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: white;
+    border: 1px solid #F3F4F6;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.parkedItem:hover {
+    border-color: #204DD2;
+    background: #F9FAFB;
+    transform: translateX(4px);
+}
+
+.parkedItemActive {
+    border-color: #204DD2;
+    background: #EFF6FF;
+}
+
+.itemInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.itemPlat {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.itemMeta {
+    font-size: 12px;
+    color: #6B7280;
+}
+
+/* Detail Display */
+.infoGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.infoBox {
+    padding: 16px;
+    background: #F9FAFB;
+    border-radius: 12px;
+    border: 1px solid transparent;
+}
+
+.infoLabel {
+    font-size: 11px;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.infoValue {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+}
+
+/* Price Banner */
+.priceBanner {
+    text-align: center;
+    padding: 32px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    transition: all 0.3s ease;
+}
+
+.priceBannerPending {
+    background: #EFF6FF;
+    border: 1px solid #DBEAFE;
+}
+
+.priceBannerSuccess {
+    background: #ECFDF5;
+    border: 1px solid #D1FAE5;
+}
+
+.priceTitle {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.priceValue {
+    font-size: 40px;
+    font-weight: 800;
+}
+
+.priceMeta {
+    font-size: 12px;
+    margin-top: 8px;
+    color: #4B5563;
+}
+
+/* Search Bar for List */
+.listSearchWrapper {
+    margin-bottom: 20px;
+}
+
+.listSearchInput {
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1px solid #E5E7EB;
+    background: #F9FAFB;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.listSearchInput:focus {
+    border-color: #204DD2;
+    background: white;
+}
+
+/* Success Buttons gap */
+.actionGroup {
+    display: flex;
+    gap: 16px;
+}
+
+.btnSecondary {
+    background: #6B7280;
+}
+
+.btnSecondary:hover {
+    background: #4B5563;
+}
+
+.btnSuccess {
+    background: #10B981;
+}
+
+.btnSuccess:hover {
+    background: #059669;
+}
