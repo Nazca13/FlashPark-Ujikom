@@ -1,5 +1,5 @@
-import { Sidebar } from "./sidebar";
-import styles from './dashboard-layout.module.css';
+import { Sidebar } from "../shared/sidebar";
+import styles from './styles.module.css';
 
 export const DashboardLayout = ({ children, activePage }) => {
   return (

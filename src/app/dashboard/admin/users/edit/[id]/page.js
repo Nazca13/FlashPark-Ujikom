@@ -1,6 +1,6 @@
-import { getUserById, updateUser } from "../../actions"; // Import actions
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { EditForm } from "./EditForm"; // Kita pisah formnya biar rapi
+import { getUserById, updateUser } from "@/features/users/actions";
+import { DashboardLayout } from "@/components/layouts/admin-layout";
+import { EditForm } from "@/features/users/components/edit-form";
 
 export default async function EditPage({ params }) {
   // 1. Ambil ID dari URL

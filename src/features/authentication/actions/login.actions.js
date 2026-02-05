@@ -2,7 +2,7 @@
 "use server";
 
 // import prisma = ambil koneksi database kita
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/database/prisma";
 
 // redirect = buat pindah halaman otomatis setelah login sukses
 import { redirect } from "next/navigation";

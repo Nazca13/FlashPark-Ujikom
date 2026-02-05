@@ -10,8 +10,8 @@
  * ============================================================================
  */
 
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { getArea, createArea, toggleAreaStatus } from "./actions";
+import { DashboardLayout } from "@/components/layouts/admin-layout";
+import { getArea, createArea, toggleAreaStatus } from "@/features/areas/actions";
 import styles from "../admin.module.css";
 
 /**

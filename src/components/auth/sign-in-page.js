@@ -2,10 +2,10 @@
 "use client";
 
 // useFormState = hook dari react buat handle state form + server action
-import { useFormState } from "react-dom";
+import { useActionState } from "react";
 
 // import fungsi loginAction dari file actions.js
-import { loginAction } from "@/app/login/actions";
+import { loginAction } from "@/features/authentication/actions";
 
 // import styling css module
 import styles from "./sign-in-page.module.css";
@@ -17,10 +17,11 @@ const initialState = {
 
 // komponen utama halaman login
 export function SignInPageView() {
-    // useFormState nge-connect form kita ke server action
+    // useActionState nge-connect form kita ke server action
     // state = isinya error message (kalo ada)
     // formAction = fungsi yg dipanggil pas form di-submit
-    const [state, formAction] = useFormState(loginAction, initialState);
+    // isPending = status loading
+    const [state, formAction, isPending] = useActionState(loginAction, initialState);
 
     return (
         // container utama halaman login

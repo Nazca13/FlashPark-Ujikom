@@ -1,14 +1,11 @@
 // import styling dari file css module
 import styles from "../admin.module.css";
 
-// import koneksi database prisma
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/database/prisma";
 
-// import fungsi createUser dan deleteUser dari actions.js
-import { createUser, deleteUser } from "../actions";
+import { createUser, deleteUser } from "@/features/users/actions";
 
-// import layout dashboard (sidebar + header)
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { DashboardLayout } from "@/components/layouts/admin-layout";
 
 // ini server component (jalan di server)
 // makanya bisa langsung pake async/await

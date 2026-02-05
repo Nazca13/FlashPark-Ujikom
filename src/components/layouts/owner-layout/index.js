@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import styles from './owner-layout.module.css';
-import { logoutAction } from "@/app/login/actions";
+import styles from './styles.module.css';
+import { logoutAction } from "@/features/authentication/actions";
 
 export const OwnerLayout = ({ children, activePage }) => {
 

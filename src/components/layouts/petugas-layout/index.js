@@ -1,31 +1,31 @@
-// ===== IMPORT DEPENDENCIES =====
+// ===== import dependencies =====
 
-// Link = komponen buat navigasi antar halaman tanpa reload (SPA-style)
-// bedanya sama <a> biasa: Link lebih cepet karena ga reload seluruh page
+// link = komponen buat navigasi antar halaman tanpa reload (spa-style)
+// bedanya sama <a> biasa: link lebih cepet karena ga reload seluruh page
 import Link from "next/link";
 
-// Image = komponen gambar dari next.js, otomatis optimize ukuran gambar
+// image = komponen gambar dari next.js, otomatis optimize ukuran gambar
 // lebih bagus dari <img> biasa karena ada lazy loading & responsive
 import Image from "next/image";
 
-// import styling CSS module, nanti dipake jadi styles.namaClass
-import styles from './petugas-layout.module.css';
+// import styling css module, nanti dipake jadi styles.namaclass
+import styles from './styles.module.css';
 
 // import fungsi logout dari actions.js
-import { logoutAction } from "@/app/login/actions";
+import { logoutAction } from "@/features/authentication/actions";
 
-// ===== KOMPONEN UTAMA LAYOUT PETUGAS =====
+// ===== komponen utama layout petugas =====
 
 // ini komponen layout yang membungkus semua halaman petugas
 // children = isi konten halaman yang dibungkus
-// activePage = nama halaman yang aktif, buat highlight menu
+// activepage = nama halaman yang aktif, buat highlight menu
 export const PetugasLayout = ({ children, activePage }) => {
 
     // daftar menu sidebar untuk petugas
     // setiap item punya: name (label), path (url), icon (nama file icon)
     const menuItems = [
         { name: "Dashboard", path: "/dashboard/petugas", icon: "dashboard-icon" },
-        { name: "Transaksi Keluar", path: "/dashboard/petugas/keluar", icon: "checkout-icon" },
+        { name: "Transaksi Keluar", path: "/dashboard/petugas/keluar", icon: "transaction" },
     ];
 
     // return = yang ditampilin ke browser
@@ -33,19 +33,19 @@ export const PetugasLayout = ({ children, activePage }) => {
         // container utama, pake flexbox (sidebar + content)
         <div className={styles.container}>
 
-            {/* ===== SIDEBAR (MENU SAMPING KIRI) ===== */}
+            {/* ===== sidebar (menu samping kiri) ===== */}
             <aside className={styles.sidebar}>
 
                 {/* bagian logo di atas */}
                 <div className={styles.logoArea}>
-                    {/* Image component dari next.js */}
+                    {/* image component dari next.js */}
                     {/* src = path file gambar (dari folder public) */}
                     {/* width & height = ukuran gambar */}
                     {/* priority = load duluan (penting banget) */}
                     <Image src="/Logo (1).svg" alt="FlashPark" width={160} height={60} priority />
                 </div>
 
-                {/* ===== BAGIAN MENU NAVIGASI ===== */}
+                {/* ===== bagian menu navigasi ===== */}
                 <div className={styles.menuGroup}>
                     {/* judul grup menu */}
                     <div className={styles.menuTitle}>Menu Petugas</div>
@@ -55,7 +55,7 @@ export const PetugasLayout = ({ children, activePage }) => {
                     {menuItems.map((item) => {
 
                         // cek apakah menu ini yg lagi aktif
-                        // kalo activePage sama dgn item.name = true
+                        // kalo activepage sama dgn item.name = true
                         const isActive = activePage === item.name;
 
                         // pilih icon yg sesuai (active = beda warna)
@@ -64,18 +64,18 @@ export const PetugasLayout = ({ children, activePage }) => {
                             ? `/sidebar/${item.icon}-active.svg`
                             : `/sidebar/${item.icon}.svg`;
 
-                        // return komponen Link untuk setiap menu
+                        // return komponen link untuk setiap menu
                         return (
-                            // Link = hyperlink tapi tanpa reload halaman
+                            // link = hyperlink tapi tanpa reload halaman
                             <Link
                                 key={item.name} // key wajib di react, untuk identify item unik
                                 href={item.path} // url tujuan
-                                // className gabungan: style dasar + style aktif (kalo lagi aktif)
+                                // classname gabungan: style dasar + style aktif (kalo lagi aktif)
                                 className={`${styles.menuItem} ${isActive ? styles.activeMenu : ''}`}
                             >
                                 {/* container icon */}
                                 <div style={{ position: 'relative', width: '20px', height: '20px' }}>
-                                    {/* Image fill = gambar ngikutin ukuran parent */}
+                                    {/* image fill = gambar ngikutin ukuran parent */}
                                     <Image
                                         src={iconSrc}
                                         alt={item.name}
@@ -90,7 +90,7 @@ export const PetugasLayout = ({ children, activePage }) => {
                     })}
                 </div>
 
-                {/* ===== BAGIAN LOGOUT (DI BAWAH SIDEBAR) ===== */}
+                {/* ===== bagian logout (di bawah sidebar) ===== */}
                 <div className={styles.footer}>
                     {/* form logout, action langsung ke server action */}
                     <form action={logoutAction}>
@@ -118,11 +118,11 @@ export const PetugasLayout = ({ children, activePage }) => {
                 </div>
             </aside>
 
-            {/* ===== MAIN CONTENT (AREA KONTEN UTAMA) ===== */}
+            {/* ===== main content (area konten utama) ===== */}
             <main className={styles.mainContent}>
                 {/* children = isi halaman yang dibungkus layout ini */}
-                {/* misal: <PetugasLayout><KontenDashboard /></PetugasLayout> */}
-                {/* maka children = <KontenDashboard /> */}
+                {/* misal: <Petugaslayout><Kontendashboard /></Petugaslayout> */}
+                {/* maka children = <Kontendashboard /> */}
                 {children}
             </main>
         </div>

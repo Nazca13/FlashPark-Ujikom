@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
-import { checkInKendaraan } from "./actions";
-import styles from "./petugas.module.css";
+import { checkInKendaraan } from "@/features/transactions/actions";
+import styles from "@/app/dashboard/petugas/styles.module.css";
 
 export default function TransactionForm({ tarifList, areaList, userId }) {
     const [loading, setLoading] = useState(false);

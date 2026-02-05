@@ -2,13 +2,13 @@
 import styles from "../admin.module.css";
 
 // import koneksi database
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/database/prisma";
 
 // import fungsi createTarif dan deleteTarif dari actions.js
-import { createTarif, deleteTarif } from "../actions";
+import { createTarif, deleteTarif } from "@/features/tariffs/actions";
 
 // import layout dashboard
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { DashboardLayout } from "@/components/layouts/admin-layout";
 
 // ini server component, makanya bisa langsung async
 export default async function TarifPage() {

@@ -1,8 +1,8 @@
-import { OwnerLayout } from "@/components/layout/owner-layout";
-import { getOwnerStats, getRevenueChartData } from "./actions";
-import RevenueChart from "@/components/ui/revenue-chart";
-import ExportButton from "@/components/ui/export-button";
-import OwnerFilter from "@/components/ui/owner-filter";
+import { OwnerLayout } from "@/components/layouts/owner-layout";
+import { getOwnerStats, getRevenueChartData } from "@/features/reports/actions";
+import RevenueChart from "@/features/reports/components/revenue-chart";
+import ExportButton from "@/components/ui/buttons/export-button";
+import OwnerFilter from "@/features/reports/components/owner-filter";
 
 export const dynamic = 'force-dynamic';
 

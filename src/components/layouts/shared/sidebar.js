@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import styles from './sidebar.module.css';
-import { logoutAction } from "@/app/login/actions";
+import { logoutAction } from "@/features/authentication/actions";
 
 export const Sidebar = ({ activePage }) => {
   // Data Menu untuk memudahkan mapping dan maintenance

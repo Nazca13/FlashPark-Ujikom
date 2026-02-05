@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import styles from "./owner-filter.module.css";
+import styles from "./styles.module.css";
 
 export default function OwnerFilter() {
     const searchParams = useSearchParams();

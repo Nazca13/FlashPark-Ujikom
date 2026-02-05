@@ -1,7 +1,7 @@
-import { PetugasLayout } from "@/components/layout/petugas-layout";
-import prisma from "@/lib/prisma";
-import TransactionForm from "./transaction-form";
-import styles from "./petugas.module.css";
+import { PetugasLayout } from "@/components/layouts/petugas-layout";
+import prisma from "@/lib/database/prisma";
+import TransactionForm from "@/components/forms/transaction-form";
+import styles from "./styles.module.css";
 
 // Agar data selalu fresh saat dibuka (Dynamic Rendering)
 export const dynamic = 'force-dynamic';

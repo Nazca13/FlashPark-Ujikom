@@ -1,5 +1,5 @@
 "use server";
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/database/prisma";
 
 // 1. Ambil Statistik Ringkasan (Card Atas)
 export async function getOwnerStats(params = {}) {

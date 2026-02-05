@@ -1,7 +1,7 @@
-import { PetugasLayout } from "@/components/layout/petugas-layout";
-import CheckoutSystem from "./checkout-system";
-import styles from "../petugas.module.css";
-import { getParkedVehicles } from "../actions";
+import { PetugasLayout } from "@/components/layouts/petugas-layout";
+import CheckoutSystem from "@/features/transactions/components/checkout";
+import styles from "../styles.module.css";
+import { getParkedVehicles } from "@/features/transactions/actions";
 
 export default async function CheckoutPage() {
     const res = await getParkedVehicles();

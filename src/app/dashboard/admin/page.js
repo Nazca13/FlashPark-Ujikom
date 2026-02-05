@@ -1,8 +1,8 @@
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
-import { StatCard } from "@/components/ui/stat-card";
-import { getDashboardData } from "./actions";
+import { DashboardLayout } from "@/components/layouts/admin-layout";
+import { StatCard } from "@/components/ui/stats/stat-card";
+import { getDashboardData } from "@/features/reports/actions";
 import styles from "./admin.module.css";
-import { DashboardFilter } from "./dashboard-filter";
+import { DashboardFilter } from "@/features/transactions/components/dashboard-filter";
 
 export default async function AdminDashboard({ searchParams }) {
   // Await searchParams before using it (Next.js 15+ requirement, good practice)

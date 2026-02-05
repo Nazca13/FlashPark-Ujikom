@@ -2,7 +2,7 @@
 "use server";
 
 // import prisma = koneksi ke database
-import prisma from "@/lib/prisma";
+import prisma from "@/lib/database/prisma";
 
 // revalidatePath = buat refresh data di halaman setelah ada perubahan
 import { revalidatePath } from "next/cache";
