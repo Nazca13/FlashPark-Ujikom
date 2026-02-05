@@ -40,7 +40,7 @@ Folder induk untuk halaman dashboard.
     - **page.js**: Halaman utama transaksi keluar.
     - **checkout/**: Folder komponen sistem checkout (Updated).
       - **index.js**: Komponen utama untuk Search, Hitung Biaya, dan Cetak Struk.
-- **admin/**: Area khusus untuk user dengan role "Admin".
+- **admin/**: Area ini khusus untuk user dengan role "Admin".
   - **users/**: Manajemen data pengguna (Petugas).
   - **tarif/**: Manajemen data tarif parkir.
   - **area/**: Manajemen data area parkir dan kapasitas.
