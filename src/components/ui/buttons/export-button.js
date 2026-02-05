@@ -19,7 +19,7 @@ export default function ExportButton({ stats, chartData }) {
         doc.setTextColor(100);
         doc.text(`Periode: ${startDate && endDate ? `${startDate} s/d ${endDate}` : 'Hari Ini'}`, 14, 28);
         doc.text(`Tanggal Cetak: ${new Date().toLocaleString('id-ID')}`, 14, 33);
-        doc.text("Dicetak Oleh: Owner", 14, 38);
+        doc.text("Dicetak Oleh: Pemilik", 14, 38);
 
         // 2. Ringkasan Statistik
         const summaryData = [
@@ -30,7 +30,7 @@ export default function ExportButton({ stats, chartData }) {
 
         autoTable(doc, {
             startY: 45,
-            head: [['Metric', 'Nilai']],
+            head: [['Metrik', 'Nilai']],
             body: summaryData,
             theme: 'grid',
             headStyles: { fillColor: [32, 77, 210] }, // Biru Flashpark

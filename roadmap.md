@@ -81,11 +81,15 @@ Dokumen ini berisi status progress pengerjaan proyek FlashPark berdasarkan roadm
 ### Pertemuan 7: Laporan Keuangan & Optimasi
 **Fokus:** Halaman Owner untuk melihat pendapatan.
 - [x] **Dashboard Owner**:
-    - *Plan*: `src/app/dashboard/owner/page.js`
+    - `src/app/dashboard/owner/page.js` (Halaman utama)
+    - **Implementasi Teknis**: Menggunakan `prisma.aggregate` untuk menghitung total pendapatan harian dan bulanan secara efisien di sisi server.
 - [x] **Chart/Grafik Pendapatan**:
-    - *Plan*: Integrasi Chart.js / Recharts
+    - **Library**: `recharts` (BarChart).
+    - **Komponen**: `src/features/reports/components/revenue-chart/index.js`.
+    - **Alur**: Server Action (`getOwnerStats`) mengambil data -> Component me-render grafik batang Interaktif.
 - [x] **Export Data**:
-    - *Plan*: Fitur Download PDF/Excel
+    - **Library**: `jspdf` & `jspdf-autotable`.
+    - **Fitur**: Generasi laporan PDF otomatis dengan tabel rapih berisi rincian pendapatan harian.
 
 ### Pertemuan 8: Debugging & Serah Terima Proyek
 **Fokus:** Pembersihan kode dan final testing. (**STATUS: SELESAI**)

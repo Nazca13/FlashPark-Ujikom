@@ -10,6 +10,8 @@ import { redirect } from "next/navigation";
 // cookies = buat simpan data session user di browser (kayak tanda dia udah login)
 import { cookies } from "next/headers";
 
+import { writeLog } from "@/features/logs/actions/log.action";
+
 // fungsi utama login, dipanggil pas user klik tombol "masuk"
 // prevState = state sebelumnya (buat error handling)
 // formData = data dari form (username & password)
@@ -58,6 +60,9 @@ export async function loginAction(prevState, formData) {
     path: "/",
   });
 
+  // catat log login
+  await writeLog(user.id_user, "Login ke sistem");
+
   // sekarang redirect (pindah halaman) sesuai role user
   if (user.role === "admin") {
     // admin masuk ke dashboard admin
@@ -77,6 +82,12 @@ export async function loginAction(prevState, formData) {
 // fungsi logout, dipanggil pas user klik tombol keluar
 export async function logoutAction() {
   const cookieStore = await cookies();
+
+  // ambil user id sebelum dihapus buat log
+  const userId = cookieStore.get("session_user_id")?.value;
+  if (userId) {
+    await writeLog(userId, "Logout dari sistem");
+  }
 
   // hapus semua cookie session
   cookieStore.delete("session_user_id");

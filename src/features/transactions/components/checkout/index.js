@@ -130,10 +130,10 @@ export default function CheckoutSystem({ initialParkedVehicles = [] }) {
 
     // 4. print receipt (cetak struk)
     // menggunakan hook useReactToPrint
-    const handlePrint = useReactToPrint({
-        content: () => componentRef.current, // elemen mana yang mau diprint
-        documentTitle: `STRUK-${data?.plat_nomor}`, // nama file kalau disave pdf
-    });
+    // const handlePrint = useReactToPrint({
+    //     content: () => componentRef.current, // elemen mana yang mau diprint
+    //     documentTitle: `STRUK-${data?.plat_nomor}`, // nama file kalau disave pdf
+    // });
 
     // fungsi reset form untuk transaksi baru
     const resetForm = () => {
@@ -141,6 +141,7 @@ export default function CheckoutSystem({ initialParkedVehicles = [] }) {
         setData(null);
         setCheckoutDone(false);
         setErrorMsg("");
+        setShowReceipt(false); // reset juga status struk
     };
 
     // hitung info biaya kalau data tersedia
@@ -225,7 +226,8 @@ export default function CheckoutSystem({ initialParkedVehicles = [] }) {
                         </div>
 
                         {/* hidden receipt (struk rahasia) - cuma dirender buat diprint, ga tampil di layar */}
-                        <div style={{ display: 'none' }}>
+                        {/* Removed as per instruction, as useReactToPrint is no longer used */}
+                        {/* <div style={{ display: 'none' }}>
                             <div ref={componentRef} style={{ padding: '40px', width: '380px', fontFamily: 'monospace' }}>
                                 <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                                     <h2 style={{ margin: 0 }}>FLASHPARK</h2>
@@ -258,7 +260,7 @@ export default function CheckoutSystem({ initialParkedVehicles = [] }) {
                                     <p>Semoga Selamat Sampai Tujuan</p>
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
 
                         {/* tombol aksi */}
                         {!checkoutDone ? (
@@ -269,7 +271,7 @@ export default function CheckoutSystem({ initialParkedVehicles = [] }) {
                         ) : (
                             // kalau sudah checkout, tombolnya "cetak struk" dan "transaksi baru"
                             <div className={styles.actionGroup}>
-                                <button onClick={handlePrint} className={`${styles.btnSubmit} ${styles.btnSuccess}`} style={{ flex: 1, marginTop: 0 }}>
+                                <button onClick={() => setShowReceipt(true)} className={`${styles.btnSubmit} ${styles.btnSuccess}`} style={{ flex: 1, marginTop: 0 }}>
                                     Cetak Struk
                                 </button>
                                 <button onClick={resetForm} className={`${styles.btnSubmit} ${styles.btnSecondary}`} style={{ flex: 1, marginTop: 0 }}>
@@ -331,6 +333,53 @@ export default function CheckoutSystem({ initialParkedVehicles = [] }) {
                     Total: <strong style={{ color: '#111827' }}>{parkedVehicles.length}</strong> Kendaraan
                 </div>
             </div>
+
+            {/* ===== POP-UP STRUK ONLINE ===== */}
+            {showReceipt && data && info && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent}>
+                        <div className={styles.modalHeader}>
+                            <h2>Struk Parkir Online</h2>
+                            <p>FlashPark - Parkir Modern & Aman</p>
+                        </div>
+
+                        <div className={styles.receiptPaper}>
+                            <div className={styles.receiptItem}>
+                                <span className={styles.receiptLabel}>Plat Nomor</span>
+                                <span className={styles.receiptValue}>{data.plat_nomor}</span>
+                            </div>
+                            <div className={styles.receiptItem}>
+                                <span className={styles.receiptLabel}>Jenis</span>
+                                <span className={styles.receiptValue}>{data.tb_tarif.jenis_kendaraan}</span>
+                            </div>
+                            <div className={styles.receiptDivider} />
+                            <div className={styles.receiptItem}>
+                                <span className={styles.receiptLabel}>Waktu Masuk</span>
+                                <span className={styles.receiptValue}>{new Date(data.waktu_masuk).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <div className={styles.receiptItem}>
+                                <span className={styles.receiptLabel}>Waktu Keluar</span>
+                                <span className={styles.receiptValue}>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <div className={styles.receiptItem}>
+                                <span className={styles.receiptLabel}>Durasi</span>
+                                <span className={styles.receiptValue}>{info.durasiText}</span>
+                            </div>
+                            <div className={styles.receiptDivider} />
+                            <div className={styles.receiptTotal}>
+                                <span>TOTAL BAYAR</span>
+                                <span>Rp {parseInt(info.totalBayar).toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        <div className={styles.modalFooter}>
+                            <button className={styles.btnOk} onClick={() => setShowReceipt(false)}>
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
         </div>
     );

@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/database/prisma";
 import { revalidatePath } from "next/cache";
+import { writeLog } from "@/features/logs/actions/log.action";
 
 export async function checkInKendaraan(formData) {
     const plat = formData.get("plat_nomor").toUpperCase();
@@ -29,6 +30,9 @@ export async function checkInKendaraan(formData) {
             where: { id_area: idArea },
             data: { terisi: { increment: 1 } },
         });
+
+        // catat log aktivitas
+        await writeLog(idUser, `Check-In Kendaraan: ${plat}`);
 
         revalidatePath("/dashboard/petugas");
 
