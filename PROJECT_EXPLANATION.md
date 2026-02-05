@@ -38,7 +38,8 @@ Folder induk untuk halaman dashboard.
   - **actions.js**: Server Action untuk memproses "Check-In" (simpan ke database).
   - **keluar/**: Fitur Transaksi Keluar (Pertemuan 6).
     - **page.js**: Halaman utama transaksi keluar.
-    - **checkout-system.js**: Komponen utama untuk Search, Hitung Biaya, dan Cetak Struk.
+    - **checkout/**: Folder komponen sistem checkout (Updated).
+      - **index.js**: Komponen utama untuk Search, Hitung Biaya, dan Cetak Struk.
 - **admin/**: Area khusus untuk user dengan role "Admin".
   - **users/**: Manajemen data pengguna (Petugas).
   - **tarif/**: Manajemen data tarif parkir.
@@ -48,14 +49,22 @@ Folder induk untuk halaman dashboard.
 ### `src/components/` (Komponen UI)
 - **layout/**: Komponen layout untuk struktur halaman.
   - **dashboard-layout.js**: Struktur umum dashboard (Sidebar + Content).
-  - **sidebar.js**: Komponen navigasi samping.
-  - **petugas-layout.js**: Layout spesifik untuk halaman petugas.
+  - **sidebar.js**: Komponen navigasi samping dengan logika icon aktif/tidak aktif.
+  - **petugas-layout/**: Folder layout spesifik untuk halaman petugas.
+    - **index.js**: Layout wrapper.
+    - **styles.module.css**: Styling CSS Module.
 - **ui/**: Komponen UI kecil (Button, Input, Card, dll).
 - **auth/**: Komponen terkait autentikasi.
   - **AuthProvider.js**: Context provider untuk mengelola session user di sisi client.
 
 ### `src/lib/` (Utilities)
 - **prisma.js**: Inisialisasi `PrismaClient`. Digunakan untuk melakukan query ke database di seluruh aplikasi. Pola singleton untuk mencegah terlalu banyak koneksi database.
+
+---
+
+## 3. Styling & Fonts
+- **Font Global**: Menggunakan font **Poppins** yang diimport dari `next/font/google` di `src/app/layout.js`.
+- **CSS Modules**: Menggunakan pendekatan CSS Modules (contoh: `styles.module.css`) untuk styling yang terisolasi per komponen.
 
 ---
 
