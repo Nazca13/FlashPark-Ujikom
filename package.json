@@ -2,11 +2,15 @@
   "name": "flashpark",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
+  "main": "main.js",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "electron-dev": "electron .",
+    "electron-build": "npm run build && electron ."
   },
   "dependencies": {
     "@prisma/adapter-pg": "^5.10.2",
@@ -22,6 +26,7 @@
   },
   "devDependencies": {
     "@prisma/client": "^5.10.2",
+    "electron": "^34.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "prisma": "^5.10.2"

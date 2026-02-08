@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  output: 'export', // Ini kunci utamanya untuk Electron
+  images: {
+    unoptimized: true, // Supaya gambar tidak error saat jadi aplikasi desktop
+  },
 };
 
 export default nextConfig;
