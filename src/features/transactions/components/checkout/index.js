@@ -20,6 +20,8 @@ export default function CheckoutSystem({ initialParkedVehicles = [] }) {
     const [checkoutDone, setCheckoutDone] = useState(false);
     // state untuk menyimpan pesan error jika ada
     const [errorMsg, setErrorMsg] = useState("");
+    // state untuk menampilkan/sembunyikan pop-up struk
+    const [showReceipt, setShowReceipt] = useState(false);
 
     // state untuk menyimpan daftar kendaraan yang sedang parkir
     // (biar bisa update realtime tanpa refresh halaman)

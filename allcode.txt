@@ -1,0 +1,5308 @@
+prisma/schema.prisma :
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+// CUKUP SATU SAJA DI SINI
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL") // Opsional, bagus untuk Prisma v7
+}
+
+model tb_transaksi {
+  id_parkir      Int            @id @default(autoincrement())
+  plat_nomor     String         @db.VarChar(20)
+  id_tarif       Int
+  id_user        Int            // Petugas yang melayani
+  id_area        Int            // Area parkir
+  waktu_masuk    DateTime       @default(now())
+  waktu_keluar   DateTime?
+  biaya_total    Decimal?       @db.Decimal(10, 0)
+  status         String         @default("masuk") @db.VarChar(20)
+   
+  // Relasi
+  tb_tarif       tb_tarif       @relation(fields: [id_tarif], references: [id_tarif])
+  tb_user        tb_user        @relation(fields: [id_user], references: [id_user])
+  tb_area_parkir tb_area_parkir @relation(fields: [id_area], references: [id_area])
+}
+
+model tb_area_parkir {
+  id_area      Int            @id @default(autoincrement())
+  nama_area    String         @db.VarChar(50)
+  kapasitas    Int
+  terisi       Int?           @default(0)
+  is_active    Boolean        @default(true)  // status aktif/nonaktif
+   
+  // Relasi balik
+  tb_transaksi tb_transaksi[]
+}
+
+model tb_tarif {
+  id_tarif        Int            @id @default(autoincrement())
+  jenis_kendaraan String         @db.VarChar(20)
+  tarif_per_jam   Decimal        @db.Decimal(10, 0)
+   
+  tb_transaksi    tb_transaksi[]
+}
+
+model tb_user {
+  id_user          Int                @id @default(autoincrement())
+  nama_lengkap     String             @db.VarChar(50)
+  username         String             @unique @db.VarChar(50)
+  password         String             @db.VarChar(100)
+  status_aktif     Int?               @default(1) @db.SmallInt
+  role             user_role          @default(petugas)
+   
+  // Relasi Balik
+  tb_transaksi     tb_transaksi[]
+  tb_kendaraan     tb_kendaraan[]
+  tb_log_aktivitas tb_log_aktivitas[]
+}
+
+model tb_kendaraan {
+  id_kendaraan    Int       @id @default(autoincrement())
+  plat_nomor      String    @unique @db.VarChar(15)
+  jenis_kendaraan String    @db.VarChar(20)
+  warna           String?   @db.VarChar(20)
+  pemilik         String?   @db.VarChar(100)
+  id_user         Int?      
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+    
+  tb_user         tb_user?  @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model tb_log_aktivitas {
+  id_log          Int       @id @default(autoincrement())
+  id_user         Int
+  aktivitas       String    @db.VarChar(100)
+  waktu_aktivitas DateTime? @default(now()) @db.Timestamp(6)
+
+  tb_user         tb_user   @relation(fields: [id_user], references: [id_user], onDelete: Cascade, onUpdate: NoAction)
+}
+
+enum user_role {
+  admin
+  petugas
+  owner
+}
+====================
+
+src/app/dashboard/admin/actions.js :
+// ini artinya fungsi ini jalan di server, bukan di browser
+"use server";
+
+// import prisma = koneksi ke database
+import prisma from "@/lib/database/prisma";
+
+// revalidatePath = buat refresh data di halaman setelah ada perubahan
+import { revalidatePath } from "next/cache";
+
+// ===== FUNGSI-FUNGSI BUAT KELOLA USER (PETUGAS) =====
+
+// fungsi bikin user baru
+// dipanggil pas admin klik tombol "tambah user"
+export async function createUser(formData) {
+  // ambil data dari form
+  const nama = formData.get("nama"); // nama lengkap
+  const username = formData.get("username"); // username buat login
+  const password = formData.get("password"); // password
+  const role = formData.get("role"); // role (admin/petugas/owner)
+
+  try {
+    // masukin data ke tabel tb_user
+    await prisma.tb_user.create({
+      data: { nama_lengkap: nama, username, password, role }
+    });
+
+    // refresh halaman users biar data baru muncul
+    revalidatePath("/dashboard/admin/users");
+  } catch (e) {
+    // kalo gagal, log error nya
+    console.error("Gagal tambah user", e);
+  }
+}
+
+// fungsi hapus user
+// dipanggil pas admin klik tombol "hapus"
+export async function deleteUser(formData) {
+  // ambil id user yg mau dihapus
+  const id = parseInt(formData.get("id_user"));
+
+  // hapus dari database
+  await prisma.tb_user.delete({ where: { id_user: id } });
+
+  // refresh halaman
+  revalidatePath("/dashboard/admin/users");
+}
+
+// ===== FUNGSI-FUNGSI BUAT KELOLA TARIF PARKIR =====
+
+// fungsi bikin tarif baru
+export async function createTarif(formData) {
+  const jenis = formData.get("jenis"); // jenis kendaraan (motor/mobil/dll)
+  const tarif = parseInt(formData.get("tarif")); // harga per jam
+
+  // masukin ke tabel tb_tarif
+  await prisma.tb_tarif.create({
+    data: { jenis_kendaraan: jenis, tarif_per_jam: tarif }
+  });
+
+  // refresh halaman tarif
+  revalidatePath("/dashboard/admin/tarif");
+}
+
+// fungsi hapus tarif
+export async function deleteTarif(formData) {
+  const id = parseInt(formData.get("id_tarif"));
+
+  await prisma.tb_tarif.delete({ where: { id_tarif: id } });
+
+  revalidatePath("/dashboard/admin/tarif");
+}
+
+// ===== FUNGSI AMBIL DATA BUAT DASHBOARD ADMIN =====
+
+// fungsi ini dipanggil buat nampilin statistik di dashboard
+export async function getDashboardData(params = {}) {
+  // params = filter dari user (plat nomor, tanggal, jenis kendaraan)
+  const { query, date, vehicle } = params;
+
+  // siapkan filter query ke database
+  const whereClause = {};
+
+  // kalo ada pencarian plat nomor
+  if (query) {
+    whereClause.plat_nomor = { contains: query };
+  }
+
+  // kalo ada filter tanggal
+  if (date) {
+    const startDate = new Date(date);
+    startDate.setHours(0, 0, 0, 0); // mulai dari jam 00:00
+    const endDate = new Date(date);
+    endDate.setHours(23, 59, 59, 999); // sampe jam 23:59
+
+    whereClause.waktu_masuk = {
+      gte: startDate, // gte = greater than or equal (>=)
+      lte: endDate // lte = less than or equal (<=)
+    };
+  }
+
+  // kalo ada filter jenis kendaraan
+  if (vehicle && vehicle !== 'Semua') {
+    whereClause.tb_tarif = {
+      jenis_kendaraan: vehicle
+    };
+  }
+
+  // ambil 5 transaksi terbaru (dengan filter)
+  const transaksiTerbaru = await prisma.tb_transaksi.findMany({
+    where: whereClause,
+    take: 5, // ambil 5 aja
+    orderBy: {
+      waktu_masuk: 'desc', // urutkan dari yg terbaru
+    },
+    include: {
+      tb_user: true, // sekalian ambil data petugas
+      tb_tarif: true // sekalian ambil data tarif
+    }
+  });
+
+  // hitung total pendapatan (semua transaksi, ga difilter)
+  const totalPendapatan = await prisma.tb_transaksi.aggregate({
+    _sum: { biaya_total: true } // jumlahkan kolom biaya_total
+  });
+
+  // hitung berapa kendaraan yg lagi parkir (status = masuk)
+  const kendaraanMasuk = await prisma.tb_transaksi.count({
+    where: { status: 'masuk' }
+  });
+
+  // hitung total petugas
+  const totalPetugas = await prisma.tb_user.count({
+    where: { role: 'petugas' }
+  });
+
+  // hitung sisa slot parkir (kapasitas total - terisi)
+  const areaData = await prisma.tb_area_parkir.aggregate({
+    _sum: {
+      kapasitas: true, // total slot semua area
+      terisi: true // total slot yang terisi
+    }
+  });
+
+  // sisa slot = kapasitas total - terisi
+  const sisaSlot = (areaData._sum.kapasitas || 0) - (areaData._sum.terisi || 0);
+
+  // return semua data buat ditampilin di dashboard
+  return {
+    transaksi: transaksiTerbaru,
+    stats: {
+      pendapatan: totalPendapatan._sum.biaya_total || 0,
+      kendaraanMasuk,
+      sisaSlot, // pake data real dari database
+      totalPetugas
+    }
+  };
+}
+====================
+
+src/app/dashboard/admin/admin.module.css :
+.pageTitle {
+  font-size: 28px;
+  font-weight: bold;
+  color: #1A1A1A;
+  margin-bottom: 30px;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.cardContainer {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  padding: 24px;
+}
+
+/* Table Styling */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: 16px;
+  border-bottom: 1px solid #1A1A1A;
+  color: #1F2937;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.table td {
+  padding: 20px 16px;
+  border-bottom: 1px solid #F3F4F6;
+  color: #1F2937;
+  font-size: 14px;
+}
+
+/* Filter Section */
+.filterRow {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1A1A1A;
+}
+
+.input {
+  height: 44px;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 14px;
+  outline: none;
+  width: 100%;
+  color: #1F2937;
+  background-color: white;
+}
+
+.searchContainer {
+  position: relative;
+  width: 100%;
+}
+
+.searchIcon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9CA3AF;
+  pointer-events: none;
+}
+
+/* --- Tambahkan ini di bawah file Dashboard.module.css kamu --- */
+
+/* Tombol Biru (Simpan/Tambah) */
+.btnPrimary {
+  background-color: #204DD2;
+  color: white;
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnPrimary:hover {
+  background-color: #1a3fb0;
+}
+
+/* Tombol Merah (Hapus) */
+.btnDanger {
+  background-color: #FEE2E2;
+  color: #DC2626;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btnDanger:hover {
+  background-color: #FECACA;
+}
+
+/* Badge (Label Role/Status) */
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badgeBlue {
+  background: #DBEAFE;
+  color: #1E40AF;
+}
+
+/* Admin */
+.badgeGreen {
+  background: #D1FAE5;
+  color: #065F46;
+}
+
+/* Petugas */
+====================
+
+src/app/dashboard/admin/area/actions.js :
+"use server";
+import prisma from "@/lib/database/prisma";
+import { revalidatePath } from "next/cache";
+
+export async function getArea() {
+  return await prisma.tb_area_parkir.findMany();
+}
+
+export async function createArea(formData) {
+  const nama = formData.get("nama_area");
+  const kapasitas = formData.get("kapasitas");
+
+  await prisma.tb_area_parkir.create({
+    data: {
+      nama_area: nama,
+      kapasitas: parseInt(kapasitas),
+      terisi: 0 // Default saat dibuat masih kosong
+    },
+  });
+  revalidatePath("/dashboard/admin/area");
+}
+
+// fungsi toggle status area parkir (aktif/nonaktif)
+export async function toggleAreaStatus(formData) {
+  // ambil id area dan status saat ini
+  const id = parseInt(formData.get("id_area"));
+  const currentStatus = formData.get("is_active") === "true";
+
+  // toggle status (kalo aktif jadi nonaktif, vice versa)
+  await prisma.tb_area_parkir.update({
+    where: { id_area: id },
+    data: { is_active: !currentStatus }
+  });
+
+  // refresh halaman
+  revalidatePath("/dashboard/admin/area");
+}
+====================
+
+src/app/dashboard/admin/area/page.js :
+/**
+ * ============================================================================
+ * DATA AREA PARKIR PAGE - Halaman Kelola Area Parkir
+ * ============================================================================
+ * Halaman ini menampilkan daftar area parkir beserta kapasitas dan status
+ * terisi, serta memungkinkan admin untuk menambah area baru.
+ * 
+ * @module DataArea
+ * @path /dashboard/admin/area
+ * ============================================================================
+ */
+
+import { DashboardLayout } from "@/components/layouts/admin-layout";
+import { getArea, createArea, toggleAreaStatus } from "@/features/areas/actions";
+import styles from "../admin.module.css";
+
+/**
+ * DataAreaPage - Komponen Halaman Data Area Parkir
+ * 
+ * @async - Server Component untuk mengambil data dari database
+ * @returns {JSX.Element} - Halaman dengan tabel area parkir dan form tambah
+ */
+export default async function DataAreaPage() {
+    // ==========================================================================
+    // DATA FETCHING
+    // ==========================================================================
+
+    /**
+     * Mengambil semua data area parkir dari database
+     * @const {Array} areaList - Array berisi semua data area
+     */
+    const areaList = await getArea();
+
+    // ==========================================================================
+    // CALCULATED VALUES
+    // ==========================================================================
+
+    /**
+     * Menghitung total kapasitas dan total terisi dari semua area
+     */
+    const totalKapasitas = areaList.reduce((sum, area) => sum + area.kapasitas, 0);
+    const totalTerisi = areaList.reduce((sum, area) => sum + (area.terisi || 0), 0);
+    const totalTersedia = totalKapasitas - totalTerisi;
+
+    // ==========================================================================
+    // RENDER JSX
+    // ==========================================================================
+
+    return (
+        <DashboardLayout activePage="Data Area">
+            {/* Page Title */}
+            <h1 className={styles.pageTitle}>Data Area Parkir</h1>
+
+            {/* Stats Summary Cards */}
+            <div className={styles.statsGrid} style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+                {/* Total Kapasitas */}
+                <div style={{
+                    background: "white",
+                    borderRadius: "16px",
+                    padding: "20px",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.02)"
+                }}>
+                    <div style={{ fontSize: "14px", color: "#6B7280", marginBottom: "8px" }}>
+                        Total Kapasitas
+                    </div>
+                    <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1F2937" }}>
+                        {totalKapasitas} <span style={{ fontSize: "14px", fontWeight: "normal" }}>slot</span>
+                    </div>
+                </div>
+
+                {/* Total Terisi */}
+                <div style={{
+                    background: "white",
+                    borderRadius: "16px",
+                    padding: "20px",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.02)"
+                }}>
+                    <div style={{ fontSize: "14px", color: "#6B7280", marginBottom: "8px" }}>
+                        Total Terisi
+                    </div>
+                    <div style={{ fontSize: "28px", fontWeight: "bold", color: "#EF4444" }}>
+                        {totalTerisi} <span style={{ fontSize: "14px", fontWeight: "normal" }}>slot</span>
+                    </div>
+                </div>
+
+                {/* Total Tersedia */}
+                <div style={{
+                    background: "white",
+                    borderRadius: "16px",
+                    padding: "20px",
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.02)"
+                }}>
+                    <div style={{ fontSize: "14px", color: "#6B7280", marginBottom: "8px" }}>
+                        Total Tersedia
+                    </div>
+                    <div style={{ fontSize: "28px", fontWeight: "bold", color: "#10B981" }}>
+                        {totalTersedia} <span style={{ fontSize: "14px", fontWeight: "normal" }}>slot</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Form Tambah Area Baru */}
+            <div className={styles.cardContainer} style={{ marginBottom: "24px" }}>
+                <h2 style={{
+                    fontSize: "18px",
+                    fontWeight: "600",
+                    marginBottom: "16px",
+                    color: "#1F2937"
+                }}>
+                    Tambah Area Baru
+                </h2>
+
+                <form action={createArea}>
+                    <div className={styles.filterRow}>
+                        {/* Input Nama Area */}
+                        <div className={styles.filterGroup}>
+                            <label className={styles.label}>Nama Area</label>
+                            <input
+                                type="text"
+                                name="nama_area"
+                                placeholder="Contoh: Zona A, Lantai 1"
+                                required
+                                className={styles.input}
+                            />
+                        </div>
+
+                        {/* Input Kapasitas */}
+                        <div className={styles.filterGroup}>
+                            <label className={styles.label}>Kapasitas (slot)</label>
+                            <input
+                                type="number"
+                                name="kapasitas"
+                                placeholder="Contoh: 50"
+                                required
+                                min="1"
+                                className={styles.input}
+                            />
+                        </div>
+
+                        {/* Tombol Submit */}
+                        <div className={styles.filterGroup} style={{ justifyContent: "flex-end" }}>
+                            <button
+                                type="submit"
+                                style={{
+                                    background: "#10B981",
+                                    color: "white",
+                                    border: "none",
+                                    padding: "12px 24px",
+                                    borderRadius: "8px",
+                                    fontSize: "14px",
+                                    fontWeight: "600",
+                                    cursor: "pointer",
+                                    height: "44px"
+                                }}
+                            >
+                                + Tambah Area
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            {/* Tabel Daftar Area */}
+            <div className={styles.cardContainer}>
+                <table className={styles.table}>
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Nama Area</th>
+                            <th>Kapasitas</th>
+                            <th>Terisi</th>
+                            <th>Tersedia</th>
+                            <th>Status Kapasitas</th>
+                            <th>Status Aktif</th>
+                            <th style={{ textAlign: 'right' }}>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {areaList.length === 0 ? (
+                            <tr>
+                                <td colSpan="9" style={{ textAlign: "center" }}>
+                                    Belum ada data area parkir.
+                                </td>
+                            </tr>
+                        ) : (
+                            areaList.map((item, index) => {
+                                const tersedia = item.kapasitas - (item.terisi || 0);
+                                const persen = Math.round(((item.terisi || 0) / item.kapasitas) * 100);
+
+                                // Tentukan status berdasarkan persentase terisi
+                                let statusColor, statusText;
+                                if (persen >= 90) {
+                                    statusColor = "#EF4444"; // Merah - Hampir Penuh
+                                    statusText = "Hampir Penuh";
+                                } else if (persen >= 50) {
+                                    statusColor = "#F59E0B"; // Kuning - Sedang
+                                    statusText = "Sedang";
+                                } else {
+                                    statusColor = "#10B981"; // Hijau - Tersedia
+                                    statusText = "Tersedia";
+                                }
+
+                                return (
+                                    <tr key={item.id_area}>
+                                        <td>{index + 1}</td>
+                                        <td style={{ fontWeight: "500" }}>{item.nama_area}</td>
+                                        <td>{item.kapasitas} slot</td>
+                                        <td>{item.terisi || 0} slot</td>
+                                        <td style={{ color: tersedia > 0 ? "#10B981" : "#EF4444" }}>
+                                            {tersedia} slot
+                                        </td>
+                                        <td>
+                                            {/* Status Badge */}
+                                            <span style={{
+                                                background: `${statusColor}20`,
+                                                color: statusColor,
+                                                padding: "4px 12px",
+                                                borderRadius: "20px",
+                                                fontSize: "12px",
+                                                fontWeight: "600"
+                                            }}>
+                                                {statusText} ({persen}%)
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {/* Status Aktif/Nonaktif */}
+                                            <span style={{
+                                                background: item.is_active ? "#10B98120" : "#6B728020",
+                                                color: item.is_active ? "#10B981" : "#6B7280",
+                                                padding: "4px 12px",
+                                                borderRadius: "20px",
+                                                fontSize: "12px",
+                                                fontWeight: "600"
+                                            }}>
+                                                {item.is_active ? "Aktif" : "Nonaktif"}
+                                            </span>
+                                        </td>
+                                        <td style={{ textAlign: 'right' }}>
+                                            {/* Tombol Toggle Status */}
+                                            <form action={toggleAreaStatus} style={{ display: 'inline' }}>
+                                                <input type="hidden" name="id_area" value={item.id_area} />
+                                                <input type="hidden" name="is_active" value={item.is_active} />
+                                                <button
+                                                    className={item.is_active ? styles.btnDanger : styles.btnPrimary}
+                                                    style={{ fontSize: '12px', padding: '6px 12px' }}
+                                                >
+                                                    {item.is_active ? "Nonaktifkan" : "Aktifkan"}
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                );
+                            })
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </DashboardLayout>
+    );
+}
+
+====================
+
+src/app/dashboard/admin/logs/page.js :
+import styles from "../admin.module.css";
+import prisma from "@/lib/database/prisma";
+import { DashboardLayout } from "@/components/layouts/admin-layout";
+import { LogsFilter } from "@/features/logs/components/logs-filter";
+
+export default async function LogsPage({ searchParams }) {
+    const params = await searchParams;
+    const { query, date } = params;
+
+    // Build Filter
+    const whereClause = {};
+
+    if (query) {
+        whereClause.OR = [
+            { aktivitas: { contains: query } },
+            { tb_user: { nama_lengkap: { contains: query } } }
+        ];
+    }
+
+    if (date) {
+        const startDate = new Date(date);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999);
+
+        whereClause.waktu_aktivitas = {
+            gte: startDate,
+            lte: endDate
+        };
+    }
+
+    // Ambil 50 log terakhir (Filtered)
+    const logs = await prisma.tb_log_aktivitas.findMany({
+        where: whereClause,
+        take: 50,
+        orderBy: { waktu_aktivitas: 'desc' },
+        include: { tb_user: true } // Join ke tabel user untuk ambil nama
+    });
+
+    return (
+        <DashboardLayout activePage="Log Aktivitas">
+            <h1 className={styles.pageTitle}>Log Aktivitas Sistem</h1>
+
+            {/* FILTER SECTION */}
+            <LogsFilter />
+
+            <div className={styles.cardContainer}>
+                <table className={styles.table}>
+                    <thead>
+                        <tr>
+                            <th>Waktu</th>
+                            <th>User / Petugas</th>
+                            <th>Aktivitas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {logs.length === 0 ? (
+                            <tr><td colSpan={3} style={{ textAlign: 'center', padding: '30px' }}>Belum ada aktivitas yang cocok.</td></tr>
+                        ) : (
+                            logs.map((log) => (
+                                <tr key={log.id_log}>
+                                    <td style={{ color: '#6B7280' }}>
+                                        {new Date(log.waktu_aktivitas).toLocaleString('id-ID', {
+                                            day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                                        })}
+                                    </td>
+                                    <td style={{ fontWeight: '600' }}>
+                                        {log.tb_user ? log.tb_user.nama_lengkap : 'Sistem/Unknown'}
+                                    </td>
+                                    <td>{log.aktivitas}</td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </DashboardLayout>
+    );
+}
+====================
+
+src/app/dashboard/admin/page.js :
+import { DashboardLayout } from "@/components/layouts/admin-layout";
+import { StatCard } from "@/components/ui/stats/stat-card";
+import { getDashboardData } from "@/features/reports/actions";
+import styles from "./admin.module.css";
+import { DashboardFilter } from "@/features/transactions/components/dashboard-filter";
+
+export default async function AdminDashboard({ searchParams }) {
+  // Await searchParams before using it (Next.js 15+ requirement, good practice)
+  const params = await searchParams;
+  const { transaksi, stats } = await getDashboardData(params);
+
+  const formatRupiah = (angka) => {
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      minimumFractionDigits: 0
+    }).format(angka);
+  };
+
+  const formatDate = (dateObj) => {
+    if (!dateObj) return "-";
+    return new Date(dateObj).toLocaleDateString("id-ID");
+  };
+
+  const formatTime = (dateObj) => {
+    if (!dateObj) return "-";
+    return new Date(dateObj).toLocaleTimeString("id-ID", {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <DashboardLayout activePage="Dashboard">
+      <h1 className={styles.pageTitle}>Dashboard</h1>
+
+      <div className={styles.statsGrid}>
+        <StatCard
+          title="Total Pendapatan"
+          value={formatRupiah(stats.pendapatan)}
+          iconPath="/content/pendapatan-icon.svg"
+        />
+        <StatCard
+          title="Kendaraan Masuk"
+          value={stats.kendaraanMasuk}
+          iconPath="/content/kendaraan-masuk-icon.svg"
+        />
+        <StatCard
+          title="Sisa Slot"
+          value={stats.sisaSlot}
+          iconPath="/content/sisa-slot-icon.svg"
+        />
+        <StatCard
+          title="Total Petugas"
+          value={stats.totalPetugas}
+          iconPath="/content/total-petugas-icon.svg"
+        />
+      </div>
+
+      {/* ================================================================== */}
+      {/* FILTER SECTION (Client Component) */}
+      {/* ================================================================== */}
+      <DashboardFilter />
+      <div className={styles.cardContainer}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>No</th>
+              <th>Petugas</th>
+              <th>Kendaraan</th>
+              <th>Plat Nomor</th>
+              <th>Tanggal</th>
+              <th>Jam Masuk</th>
+              <th>Jam Keluar</th>
+              <th>Total Biaya</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transaksi.length === 0 ? (
+              <tr>
+                <td colSpan="8" style={{ textAlign: "center" }}>
+                  Belum ada data transaksi.
+                </td>
+              </tr>
+            ) : (
+              transaksi.map((item, index) => (
+                <tr key={item.id_parkir}>
+                  <td>{index + 1}</td>
+                  <td>{item.tb_user?.nama_lengkap || "Sistem"}</td>
+                  <td>{item.tb_tarif?.jenis_kendaraan || "Kendaraan"}</td>
+                  <td>{item.plat_nomor}</td>
+                  <td>{formatDate(item.waktu_masuk)}</td>
+                  <td>{formatTime(item.waktu_masuk)}</td>
+                  <td>{formatTime(item.waktu_keluar)}</td>
+                  <td>{item.biaya_total ? formatRupiah(item.biaya_total) : "-"}</td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </DashboardLayout >
+  );
+}
+====================
+
+src/app/dashboard/admin/tarif/actions.js :
+"use server";
+import prisma from "@/lib/database/prisma";
+import { revalidatePath } from "next/cache";
+
+// Mengambil semua data tarif (Kriteria 1.1)
+export async function getTarif() {
+  return await prisma.tb_tarif.findMany();
+}
+
+// Menambah atau Update Tarif (Kriteria 1.8)
+export async function saveTarif(formData) {
+  const id = formData.get("id_tarif"); // Jika ada ID, berarti update
+  const jenis = formData.get("jenis_kendaraan");
+  const harga = formData.get("tarif_per_jam");
+
+  if (id) {
+    await prisma.tb_tarif.update({
+      where: { id_tarif: parseInt(id) },
+      data: { jenis_kendaraan: jenis, tarif_per_jam: parseFloat(harga) },
+    });
+  } else {
+    await prisma.tb_tarif.create({
+      data: { jenis_kendaraan: jenis, tarif_per_jam: parseFloat(harga) },
+    });
+  }
+  revalidatePath("/dashboard/admin/tarif");
+}
+====================
+
+src/app/dashboard/admin/tarif/page.js :
+// import styling dari css module
+import styles from "../admin.module.css";
+
+// import koneksi database
+import prisma from "@/lib/database/prisma";
+
+// import fungsi createTarif dan deleteTarif dari actions.js
+import { createTarif, deleteTarif } from "@/features/tariffs/actions";
+
+// import layout dashboard
+import { DashboardLayout } from "@/components/layouts/admin-layout";
+
+// ini server component, makanya bisa langsung async
+export default async function TarifPage() {
+    // ambil semua data tarif dari database
+    // orderBy asc = urutkan dari id kecil ke besar
+    const tarifList = await prisma.tb_tarif.findMany({ orderBy: { id_tarif: 'asc' } });
+
+    return (
+        // bungkus pake layout dashboard
+        <DashboardLayout activePage="Data Tarif">
+            {/* judul halaman */}
+            <h1 className={styles.pageTitle}>Data Tarif Parkir</h1>
+
+            {/* ===== FORM TAMBAH TARIF BARU ===== */}
+            <div className={styles.cardContainer} style={{ marginBottom: '30px' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px' }}>+ Set Tarif Baru</h3>
+
+                {/* form langsung connect ke server action createTarif */}
+                <form action={createTarif} className={styles.filterRow} style={{ alignItems: 'flex-end' }}>
+
+                    {/* input jenis kendaraan */}
+                    <div className={styles.filterGroup} style={{ flex: 2 }}>
+                        <label className={styles.label}>Jenis Kendaraan</label>
+                        <input name="jenis" className={styles.input} placeholder="Contoh: TRUK / BUS" required />
+                    </div>
+
+                    {/* input harga per jam */}
+                    <div className={styles.filterGroup} style={{ flex: 1 }}>
+                        <label className={styles.label}>Tarif Per Jam (Rp)</label>
+                        <input name="tarif" type="number" className={styles.input} placeholder="5000" required />
+                    </div>
+
+                    {/* tombol submit */}
+                    <button type="submit" className={styles.btnPrimary}>Tambah</button>
+                </form>
+            </div>
+
+            {/* ===== TABEL DATA TARIF ===== */}
+            <div className={styles.cardContainer}>
+                <table className={styles.table}>
+                    {/* header tabel */}
+                    <thead>
+                        <tr>
+                            <th width="80">ID</th>
+                            <th>Jenis Kendaraan</th>
+                            <th>Harga / Jam</th>
+                            <th style={{ textAlign: 'right' }}>Aksi</th>
+                        </tr>
+                    </thead>
+                    {/* body tabel, loop dari data tarifList */}
+                    <tbody>
+                        {tarifList.map((t) => (
+                            <tr key={t.id_tarif}>
+                                <td>#{t.id_tarif}</td>
+                                {/* uppercase biar keliatan rapi */}
+                                <td style={{ fontWeight: 'bold', textTransform: 'uppercase' }}>{t.jenis_kendaraan}</td>
+                                {/* format harga pake toLocaleString biar ada titik pemisah ribuan */}
+                                <td>Rp {parseInt(t.tarif_per_jam).toLocaleString('id-ID')}</td>
+                                <td style={{ textAlign: 'right' }}>
+                                    {/* proteksi: tarif default (motor/mobil) ga boleh dihapus */}
+                                    {t.jenis_kendaraan.toLowerCase() !== 'mobil' && t.jenis_kendaraan.toLowerCase() !== 'motor' ? (
+                                        // kalo bukan motor/mobil, tampilin tombol hapus
+                                        <form action={deleteTarif}>
+                                            <input type="hidden" name="id_tarif" value={t.id_tarif} />
+                                            <button className={styles.btnDanger}>Hapus</button>
+                                        </form>
+                                    ) : (
+                                        // kalo motor/mobil, tampilin text "Default" aja
+                                        <span style={{ fontSize: '12px', color: '#9CA3AF' }}>Default</span>
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </DashboardLayout>
+    );
+}
+====================
+
+src/app/dashboard/admin/users/actions.js :
+"use server";
+import prisma from "@/lib/database/prisma";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+// 1. Ambil Semua Data User
+export async function getUsers() {
+  return await prisma.tb_user.findMany({
+    orderBy: { id_user: "asc" },
+  });
+}
+
+// 2. Tambah User Baru
+export async function createUser(prevState, formData) {
+  const nama = formData.get("nama");
+  const username = formData.get("username");
+  const password = formData.get("password");
+  const role = formData.get("role");
+
+  try {
+    await prisma.tb_user.create({
+      data: {
+        nama_lengkap: nama,
+        username: username,
+        password: password,
+        role: role,
+        status_aktif: 1,
+      },
+    });
+  } catch (err) {
+    return { error: "Gagal membuat user. Username mungkin sudah ada." };
+  }
+
+  revalidatePath("/dashboard/admin/users");
+  redirect("/dashboard/admin/users");
+}
+
+// 3. Hapus User
+export async function deleteUser(formData) {
+  const id = formData.get("id");
+  if (!id) return;
+
+  try {
+    await prisma.tb_user.delete({
+      where: { id_user: parseInt(id) },
+    });
+  } catch (error) {
+    console.error("Gagal hapus user:", error);
+  }
+
+  revalidatePath("/dashboard/admin/users");
+}
+
+// 4. Ambil 1 User berdasarkan ID (Untuk Form Edit)
+export async function getUserById(id) {
+  return await prisma.tb_user.findUnique({
+    where: { id_user: parseInt(id) }
+  });
+}
+
+// 5. Update User
+export async function updateUser(prevState, formData) {
+  const id = formData.get("id");
+  const nama = formData.get("nama");
+  const username = formData.get("username");
+  const role = formData.get("role");
+  const password = formData.get("password");
+
+  try {
+    const dataToUpdate = {
+      nama_lengkap: nama,
+      username: username,
+      role: role,
+    };
+
+    // Update password HANYA jika diisi (kalau kosong, pakai password lama)
+    if (password && password.trim() !== "") {
+      dataToUpdate.password = password;
+    }
+
+    await prisma.tb_user.update({
+      where: { id_user: parseInt(id) },
+      data: dataToUpdate,
+    });
+
+  } catch (err) {
+    return { error: "Gagal update. Username mungkin bentrok." };
+  }
+
+  revalidatePath("/dashboard/admin/users");
+  return { success: true };
+}
+====================
+
+src/app/dashboard/admin/users/edit/[id]/page.js :
+import { getUserById, updateUser } from "@/features/users/actions";
+import { DashboardLayout } from "@/components/layouts/admin-layout";
+import { EditForm } from "@/features/users/components/edit-form";
+
+export default async function EditPage({ params }) {
+  // 1. Ambil ID dari URL
+  const { id } = params;
+
+  // 2. Ambil data user lama dari database
+  const user = await getUserById(id);
+
+  if (!user) {
+    return <div>User tidak ditemukan!</div>;
+  }
+
+  // 3. Tampilkan Form dengan data user
+  return (
+    <DashboardLayout activePage="Data User">
+      <div style={{ maxWidth: "600px", background: "white", padding: "30px", borderRadius: "16px" }}>
+        <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "20px" }}>
+          Edit Pengguna
+        </h2>
+        {/* Kita lempar data user ke komponen form */}
+        <EditForm user={user} />
+      </div>
+    </DashboardLayout>
+  );
+}
+====================
+
+src/app/dashboard/admin/users/page.js :
+// import styling dari file css module
+import styles from "../admin.module.css";
+
+import prisma from "@/lib/database/prisma";
+
+import { createUser, deleteUser } from "@/features/users/actions";
+
+import { DashboardLayout } from "@/components/layouts/admin-layout";
+
+// ini server component (jalan di server)
+// makanya bisa langsung pake async/await
+export default async function UsersPage() {
+  // ambil semua user dari database
+  // orderBy desc = urutkan dari yg terbaru (id paling besar dulu)
+  const users = await prisma.tb_user.findMany({ orderBy: { id_user: 'desc' } });
+
+  return (
+    // bungkus pake layout dashboard, activePage buat highlight menu
+    <DashboardLayout activePage="Data User">
+      {/* judul halaman */}
+      <h1 className={styles.pageTitle}>Kelola Pengguna</h1>
+
+      {/* ===== BAGIAN FORM TAMBAH USER BARU ===== */}
+      <div className={styles.cardContainer} style={{ marginBottom: '30px' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px' }}>+ Tambah User Baru</h3>
+
+        {/* form ini langsung connect ke server action createUser */}
+        <form action={createUser} className={styles.filterRow} style={{ alignItems: 'flex-end' }}>
+
+          {/* input nama lengkap */}
+          <div className={styles.filterGroup} style={{ flex: 2 }}>
+            <label className={styles.label}>Nama Lengkap</label>
+            <input name="nama" className={styles.input} placeholder="Contoh: Budi Santoso" required />
+          </div>
+
+          {/* input username */}
+          <div className={styles.filterGroup} style={{ flex: 1 }}>
+            <label className={styles.label}>Username</label>
+            <input name="username" className={styles.input} placeholder="user123" required />
+          </div>
+
+          {/* input password */}
+          <div className={styles.filterGroup} style={{ flex: 1 }}>
+            <label className={styles.label}>Password</label>
+            <input name="password" type="password" className={styles.input} placeholder="******" required />
+          </div>
+
+          {/* dropdown pilih role */}
+          <div className={styles.filterGroup} style={{ flex: 1 }}>
+            <label className={styles.label}>Role</label>
+            <select name="role" className={styles.input} style={{ background: 'white' }}>
+              <option value="petugas">Petugas</option>
+              <option value="admin">Admin</option>
+              <option value="owner">Owner</option>
+            </select>
+          </div>
+
+          {/* tombol submit */}
+          <button type="submit" className={styles.btnPrimary}>Simpan</button>
+        </form>
+      </div>
+
+      {/* ===== BAGIAN TABEL DATA USER ===== */}
+      <div className={styles.cardContainer}>
+        <table className={styles.table}>
+          {/* header tabel */}
+          <thead>
+            <tr>
+              <th width="50">ID</th>
+              <th>Nama Lengkap</th>
+              <th>Username</th>
+              <th>Role</th>
+              <th style={{ textAlign: 'right' }}>Aksi</th>
+            </tr>
+          </thead>
+          {/* body tabel, diisi pake loop dari data users */}
+          <tbody>
+            {users.map((u) => (
+              // setiap baris pake id_user sebagai key (wajib di react)
+              <tr key={u.id_user}>
+                <td>#{u.id_user}</td>
+                <td>{u.nama_lengkap}</td>
+                <td>{u.username}</td>
+                <td>
+                  {/* badge role, warna beda buat admin vs petugas */}
+                  <span className={`${styles.badge} ${u.role === 'admin' ? styles.badgeBlue : styles.badgeGreen}`}>
+                    {u.role.toUpperCase()}
+                  </span>
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  {/* form buat hapus user, langsung ke server action deleteUser */}
+                  <form action={deleteUser}>
+                    {/* hidden input = kirim id_user ke server tanpa user lihat */}
+                    <input type="hidden" name="id_user" value={u.id_user} />
+                    <button className={styles.btnDanger}>Hapus</button>
+                  </form>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </DashboardLayout>
+  );
+}
+====================
+
+src/app/dashboard/admin/users/page.module.css :
+.pageTitle {
+  font-size: 28px;
+  font-weight: bold;
+  color: #1A1A1A;
+  margin-bottom: 30px;
+}
+
+.cardContainer {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+  padding: 24px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th {
+  text-align: left;
+  padding: 16px;
+  border-bottom: 2px solid #E5E7EB;
+  color: #374151;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.table td {
+  padding: 16px;
+  border-bottom: 1px solid #F3F4F6;
+  color: #4B5563;
+  font-size: 14px;
+}
+
+.actionGroup {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+====================
+
+src/app/dashboard/owner/actions.js :
+// file ini jalan di server, bukan di browser
+"use server";
+
+// import koneksi database prisma
+import prisma from "@/lib/database/prisma";
+
+// fungsi 1: ambil statistik ringkasan untuk card di dashboard owner
+// params bisa berisi startDate dan endDate untuk filter tanggal
+export async function getOwnerStats(params = {}) {
+    // ambil parameter tanggal dari filter (kalau ada)
+    const { startDate, endDate } = params;
+
+    // kondisi awal: hanya ambil transaksi yang sudah keluar (sudah bayar)
+    let whereClause = { status: 'keluar' };
+
+    // kalau user pilih range tanggal tertentu
+    if (startDate && endDate) {
+        // filter transaksi berdasarkan waktu keluar
+        whereClause.waktu_keluar = {
+            gte: new Date(startDate), // dari tanggal mulai
+            lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) // sampai akhir hari tanggal selesai
+        };
+    } else {
+        // kalau ga ada filter, default tampilkan data hari ini aja
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // set ke jam 00:00:00
+        whereClause.waktu_keluar = { gte: today };
+    }
+
+    // hitung total pendapatan sesuai filter (hari ini atau range yang dipilih)
+    const revenueStats = await prisma.tb_transaksi.aggregate({
+        _sum: { biaya_total: true }, // jumlahkan semua biaya_total
+        where: whereClause
+    });
+
+    // hitung pendapatan bulan ini (tetap tampil sebagai pembanding)
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1); // tanggal 1 bulan ini
+    const revenueMonth = await prisma.tb_transaksi.aggregate({
+        _sum: { biaya_total: true },
+        where: {
+            waktu_keluar: { gte: startOfMonth }, // dari awal bulan
+            status: 'keluar'
+        }
+    });
+
+    // hitung total jumlah transaksi sesuai filter
+    const totalTx = await prisma.tb_transaksi.count({
+        where: whereClause
+    });
+
+    // return data statistik
+    return {
+        today: parseInt(revenueStats._sum.biaya_total || 0), // pendapatan hari ini/range
+        month: parseInt(revenueMonth._sum.biaya_total || 0), // pendapatan bulan ini
+        totalTransactions: totalTx // total kendaraan keluar
+    };
+}
+
+// fungsi 2: ambil data untuk grafik pendapatan
+export async function getRevenueChartData(params = {}) {
+    const { startDate, endDate } = params;
+    const chartData = []; // array untuk menyimpan data grafik
+
+    // tentukan tanggal mulai dan selesai
+    let start = startDate ? new Date(startDate) : new Date();
+    let end = endDate ? new Date(endDate) : new Date();
+
+    // kalau ga ada filter tanggal, default 7 hari terakhir
+    if (!startDate) {
+        start.setDate(start.getDate() - 6); // mundur 6 hari dari hari ini
+    }
+
+    // set waktu ke awal dan akhir hari
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+
+    // loop untuk setiap hari dalam range tanggal
+    let current = new Date(start);
+    while (current <= end) {
+        const d = new Date(current);
+        const nextDay = new Date(d);
+        nextDay.setDate(d.getDate() + 1); // hari berikutnya
+
+        // hitung pendapatan untuk hari ini
+        const revenue = await prisma.tb_transaksi.aggregate({
+            _sum: { biaya_total: true },
+            where: {
+                waktu_keluar: {
+                    gte: d, // dari jam 00:00 hari ini
+                    lt: nextDay // sampai sebelum jam 00:00 hari besok
+                },
+                status: 'keluar'
+            }
+        });
+
+        // tambahkan data ke array grafik
+        chartData.push({
+            date: d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }), // format: "09 Feb"
+            revenue: parseInt(revenue._sum.biaya_total || 0) // pendapatan hari itu
+        });
+
+        // lanjut ke hari berikutnya
+        current.setDate(current.getDate() + 1);
+    }
+
+    // return array data grafik
+    return chartData;
+}
+
+====================
+
+src/app/dashboard/owner/page.js :
+import { OwnerLayout } from "@/components/layouts/owner-layout";
+import { getOwnerStats, getRevenueChartData } from "@/features/reports/actions";
+import RevenueChart from "@/features/reports/components/revenue-chart";
+import ExportButton from "@/components/ui/buttons/export-button";
+import OwnerFilter from "@/features/reports/components/owner-filter";
+
+export const dynamic = 'force-dynamic';
+
+// styling card (inline biar praktis)
+const cardStyle = {
+    background: 'white',
+    borderRadius: '16px',
+    padding: '24px',
+    boxShadow: '0 2px 6px rgba(0,0,0,0.02)',
+    flex: 1
+};
+
+export default async function OwnerDashboard({ searchParams }) {
+    const params = await searchParams;
+    // ambil data statistik & chart
+    const stats = await getOwnerStats(params);
+    const chartData = await getRevenueChartData(params);
+
+    return (
+        <OwnerLayout activePage="Dashboard">
+
+            {/* bagian header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                <div>
+                    <h1 style={{ fontSize: '24px', fontWeight: 'bold', color: '#1F2937', marginBottom: '4px' }}>
+                        Dashboard Pemilik
+                    </h1>
+                    <p style={{ color: '#6B7280' }}>Pantau performa bisnis parkir Anda hari ini.</p>
+                </div>
+                <ExportButton stats={stats} chartData={chartData} />
+            </div>
+
+            {/* bagian filter tanggal */}
+            <OwnerFilter />
+
+            {/* kartu ringkasan pendapatan */}
+            <div style={{ display: 'flex', gap: '20px', marginBottom: '30px' }}>
+                {/* 1. pendapatan hari ini */}
+                <div style={cardStyle}>
+                    <p style={{ color: '#6B7280', fontSize: '14px', marginBottom: '8px' }}>Pendapatan Hari Ini</p>
+                    <h2 style={{ fontSize: '32px', fontWeight: 'bold', color: '#10B981', margin: 0 }}>
+                        Rp {stats.today.toLocaleString()}
+                    </h2>
+                </div>
+
+                {/* 2. pendapatan bulan ini */}
+                <div style={cardStyle}>
+                    <p style={{ color: '#6B7280', fontSize: '14px', marginBottom: '8px' }}>Pendapatan Bulan Ini</p>
+                    <h2 style={{ fontSize: '32px', fontWeight: 'bold', color: '#204DD2', margin: 0 }}>
+                        Rp {stats.month.toLocaleString()}
+                    </h2>
+                </div>
+
+                {/* 3. total transaksi */}
+                <div style={cardStyle}>
+                    <p style={{ color: '#6B7280', fontSize: '14px', marginBottom: '8px' }}>Total Kendaraan Keluar</p>
+                    <h2 style={{ fontSize: '32px', fontWeight: 'bold', color: '#F59E0B', margin: 0 }}>
+                        {stats.totalTransactions} <span style={{ fontSize: '16px', fontWeight: 'normal' }}>Unit</span>
+                    </h2>
+                </div>
+            </div>
+
+            {/* bagian grafik pendapatan */}
+            <div style={{ ...cardStyle, flex: 'none' }}>
+                <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px', color: '#1F2937' }}>
+                    Tren Pendapatan (7 Hari Terakhir)
+                </h3>
+                <RevenueChart data={chartData} />
+            </div>
+
+        </OwnerLayout>
+    );
+}
+
+====================
+
+src/app/dashboard/petugas/actions.js :
+"use server";
+
+// import prisma = koneksi ke database kita
+import prisma from "@/lib/database/prisma";
+// revalidatePath = buat refresh data di halaman setelah ada perubahan
+import { revalidatePath } from "next/cache";
+
+// ===== FUNGSI UNTUK PROSES KENDARAAN MASUK (CHECK-IN) =====
+
+export async function checkInKendaraan(formData) {
+  // ambil data dari form input petugas
+  const plat = formData.get("plat_nomor").toUpperCase(); // plat nomor (pastiin uppercase)
+  const idTarif = parseInt(formData.get("id_tarif")); // jenis kendaraan & tarifnya
+  const idArea = parseInt(formData.get("id_area")); // area parkir yg dipilih
+  const idUser = parseInt(formData.get("id_user")); // ID Petugas yg lagi tugas
+
+  // validasi: pastiin semua data terisi
+  if (!plat || !idTarif || !idArea) {
+    return { success: false, error: "Data tidak lengkap! Mohon isi semua field." };
+  }
+
+  try {
+    // 1. Simpan data transaksi baru ke database (tb_transaksi)
+    await prisma.tb_transaksi.create({
+      data: {
+        plat_nomor: plat,
+        id_tarif: idTarif,
+        id_area: idArea,
+        id_user: idUser,
+        status: "masuk",         // kendaraan baru masuk
+        waktu_masuk: new Date(), // catat waktu pas dia masuk
+      },
+    });
+
+    // 2. Update slot parkir di area tsb (tambah 1 yg terisi)
+    await prisma.tb_area_parkir.update({
+      where: { id_area: idArea },
+      data: { terisi: { increment: 1 } },
+    });
+
+    // refresh halaman dashboard petugas biar list terbaru muncul
+    revalidatePath("/dashboard/petugas");
+
+    return { success: true };
+
+  } catch (error) {
+    // kalo gagal, catat errornya buat debug
+    console.error("Kesalahan sistem saat Check-In:", error);
+    return { success: false, error: "Gagal memproses check-in. Coba lagi." };
+  }
+}
+
+// ===== FUNGSI UNTUK CARI KENDARAAN YG SEDANG PARKIR =====
+
+export async function searchKendaraanMasuk(plat) {
+  try {
+    // cari kendaraan yg statusnya 'masuk' berdasarkan plat nomor
+    const data = await prisma.tb_transaksi.findFirst({
+      where: {
+        plat_nomor: {
+          contains: plat.toUpperCase()
+        },
+        status: 'masuk'
+      },
+      include: {
+        tb_tarif: true, // ambil info biaya per jam
+        tb_area_parkir: true // ambil info lokasinya
+      }
+    });
+
+    // kalo ga ketemu plat nomor yg statusnya masih parkir
+    if (!data) {
+      return { success: false, error: "Kendaraan tidak ditemukan atau sudah keluar." };
+    }
+
+    // KONVERSI DATA: Prisma Decimal ke Javascript Number
+    // Penting! Supaya data bisa dikirim dari Server Component ke Client Component
+    const safeData = {
+      ...data,
+      tb_tarif: {
+        ...data.tb_tarif,
+        tarif_per_jam: parseInt(data.tb_tarif.tarif_per_jam)
+      }
+    };
+
+    return { success: true, data: safeData };
+
+  } catch (error) {
+    console.error("Kesalahan sistem saat mencari kendaraan:", error);
+    return { success: false, error: "Terjadi kesalahan server." };
+  }
+}
+
+// ===== FUNGSI UNTUK PROSES KELOAR (CHECKOUT) =====
+
+export async function checkoutKendaraan(id_parkir, total_bayar, id_area) {
+  try {
+    // 1. Update data transaksi: set waktu keluar, biaya, & status jadi 'keluar'
+    await prisma.tb_transaksi.update({
+      where: { id_parkir: parseInt(id_parkir) },
+      data: {
+        waktu_keluar: new Date(),
+        biaya_total: total_bayar,
+        status: 'keluar'
+      }
+    });
+
+    // 2. Update area parkir: kurangi slot terisi (slot kosong lagi)
+    await prisma.tb_area_parkir.update({
+      where: { id_area: parseInt(id_area) },
+      data: {
+        terisi: { decrement: 1 }
+      }
+    });
+
+    // refresh halaman checkout petugas
+    revalidatePath("/dashboard/petugas/keluar");
+    return { success: true };
+
+  } catch (error) {
+    console.error("Kesalahan sistem saat Checkout:", error);
+    return { success: false, error: "Gagal memproses checkout." };
+  }
+}
+
+// ===== FUNGSI AMBIL SEMUA KENDARAAN YG SEDANG PARKIR =====
+
+export async function getParkedVehicles() {
+  try {
+    // ambil semua kendaraan yg statusnya 'masuk'
+    const data = await prisma.tb_transaksi.findMany({
+      where: { status: 'masuk' },
+      include: {
+        tb_tarif: true,
+        tb_area_parkir: true
+      },
+      orderBy: { waktu_masuk: 'desc' } // urutkan dari yg paling baru masuk
+    });
+
+    // konversi semua data Decimal ke Number biar aman buat client
+    const safeData = data.map(item => ({
+      ...item,
+      tb_tarif: {
+        ...item.tb_tarif,
+        tarif_per_jam: Number(item.tb_tarif.tarif_per_jam)
+      }
+    }));
+
+    return { success: true, data: safeData };
+  } catch (error) {
+    console.error("Gagal mengambil daftar kendaraan parkir:", error);
+    return { success: false, error: "Gagal mengambil data dari server." };
+  }
+}
+====================
+
+src/app/dashboard/petugas/keluar/page.js :
+import { PetugasLayout } from "@/components/layouts/petugas-layout";
+import CheckoutSystem from "@/features/transactions/components/checkout";
+import styles from "../styles.module.css";
+import { getParkedVehicles } from "@/features/transactions/actions";
+
+export default async function CheckoutPage() {
+    const res = await getParkedVehicles();
+    const parkedData = res.success ? res.data : [];
+
+    return (
+        <PetugasLayout activePage="Transaksi Keluar">
+            <div className={styles.container} style={{ gridTemplateColumns: 'minmax(0, 1fr)' }}>
+                <div style={{ width: '100%' }}>
+                    <h1 className={styles.heading} style={{ textAlign: 'center', marginBottom: '30px' }}>
+                        Transaksi Keluar
+                    </h1>
+                    <CheckoutSystem initialParkedVehicles={parkedData} />
+                </div>
+            </div>
+        </PetugasLayout>
+    );
+}
+
+====================
+
+src/app/dashboard/petugas/page.js :
+import { PetugasLayout } from "@/components/layouts/petugas-layout";
+import prisma from "@/lib/database/prisma";
+import TransactionForm from "@/components/forms/transaction-form";
+import styles from "./styles.module.css";
+
+// Agar data selalu fresh saat dibuka (Dynamic Rendering)
+export const dynamic = 'force-dynamic';
+
+export default async function PetugasDashboard() {
+    // 1. Ambil Data Master (Tarif & Area)
+    const rawTarifData = await prisma.tb_tarif.findMany();
+    const areaData = await prisma.tb_area_parkir.findMany({
+        where: { is_active: true }
+    });
+
+    // Serialize Decimal (Prisma) ke plain number buat Client Component
+    const tarifData = rawTarifData.map(t => ({
+        ...t,
+        tarif_per_jam: Number(t.tarif_per_jam)
+    }));
+
+    // 2. Ambil Data Transaksi Hari Ini (Buat List History di kanan)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const rawRecentTx = await prisma.tb_transaksi.findMany({
+        where: {
+            waktu_masuk: { gte: today } // Transaksi dari jam 00:00 hari ini
+        },
+        orderBy: { waktu_masuk: 'desc' }, // Yang baru masuk paling atas
+        take: 5,
+        include: { tb_tarif: true }
+    });
+
+    // Serialize Decimal di recentTx juga biar aman
+    const recentTx = rawRecentTx.map(tx => ({
+        ...tx,
+        biaya_total: tx.biaya_total ? Number(tx.biaya_total) : null,
+        tb_tarif: {
+            ...tx.tb_tarif,
+            tarif_per_jam: Number(tx.tb_tarif.tarif_per_jam)
+        }
+    }));
+
+    // 3. Hitung Statistik Sederhana
+    const totalKapasitas = areaData.reduce((acc, curr) => acc + curr.kapasitas, 0);
+    const totalTerisi = areaData.reduce((acc, curr) => acc + (curr.terisi || 0), 0);
+    const sisaSlot = totalKapasitas - totalTerisi;
+
+    return (
+        <PetugasLayout activePage="Dashboard">
+            <div className={styles.container}>
+
+                {/* KOLOM KIRI: Form Input Utama */}
+                <div className={styles.card}>
+                    <h2 className={styles.cardTitle}>Kendaraan Masuk</h2>
+                    <TransactionForm
+                        tarifList={tarifData}
+                        areaList={areaData}
+                        userId={1} // Nanti diganti session.user.id
+                    />
+                </div>
+
+                {/* KOLOM KANAN: Statistik & History */}
+                <div>
+                    {/* Kartu Biru Besar (Sisa Slot) */}
+                    <div className={styles.statCard}>
+                        <div className={styles.statLabel}>Kapasitas Tersedia</div>
+                        <div className={styles.statNumber}>{sisaSlot}</div>
+                        <div style={{ fontSize: '14px', opacity: 0.8 }}>Dari total {totalKapasitas} slot</div>
+                    </div>
+
+                    {/* Kartu List Kendaraan Terakhir */}
+                    <div className={styles.card}>
+                        <h3 className={styles.cardTitle} style={{ fontSize: '16px' }}>Baru Saja Masuk</h3>
+
+                        {recentTx.length === 0 ? (
+                            <p style={{ color: '#9CA3AF', textAlign: 'center', padding: '20px' }}>Belum ada kendaraan masuk.</p>
+                        ) : (
+                            recentTx.map((tx) => (
+                                <div key={tx.id_parkir} className={styles.historyItem}>
+                                    <div>
+                                        <div className={styles.historyPlat}>{tx.plat_nomor}</div>
+                                        <div className={styles.historyMeta}>
+                                            {tx.tb_tarif.jenis_kendaraan} • {new Date(tx.waktu_masuk).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                        </div>
+                                    </div>
+                                    <span className={`${styles.badge} ${styles.badgeMasuk}`}>Masuk</span>
+                                </div>
+                            ))
+                        )}
+                    </div>
+                </div>
+
+            </div>
+        </PetugasLayout>
+    );
+}
+====================
+
+src/app/dashboard/petugas/styles.module.css :
+/* Container Utama: Membagi layar jadi 2 kolom (Kiri: Form, Kanan: Info) */
+.container {
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    /* Form lebih lebar dikit */
+    gap: 30px;
+}
+
+/* Kartu Putih Standard (Mirip Admin) */
+.card {
+    background: #FFFFFF;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.03);
+    height: fit-content;
+}
+
+/* Judul Section */
+.cardTitle {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1A1A1A;
+    margin-bottom: 24px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+/* Input Plat Nomor (Dibuat Besar & Gagah) */
+.inputPlat {
+    width: 100%;
+    height: 70px;
+    font-size: 32px;
+    font-weight: 800;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+    border: 2px solid #E5E7EB;
+    border-radius: 12px;
+    background: #F9FAFB;
+    color: #1F2937;
+    /* Pastikan warna teks gelap */
+    transition: all 0.2s;
+}
+
+.inputPlat:focus {
+    outline: none;
+    border-color: #204DD2;
+    background: #FFF;
+    box-shadow: 0 0 0 4px rgba(32, 77, 210, 0.1);
+}
+
+/* Group Pilihan Kendaraan */
+.vehicleGroup {
+    display: flex;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+/* Tombol Pilihan (Radio Button Style) */
+.vehicleOption {
+    flex: 1;
+    cursor: pointer;
+    position: relative;
+}
+
+.vehicleRadio {
+    position: absolute;
+    opacity: 0;
+}
+
+.vehicleCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    border: 2px solid #E5E7EB;
+    border-radius: 12px;
+    color: #9CA3AF;
+    transition: all 0.2s;
+}
+
+/* Efek saat dipilih */
+.vehicleRadio:checked+.vehicleCard {
+    border-color: #204DD2;
+    background: #EFF6FF;
+    /* Biru muda banget */
+    color: #204DD2;
+}
+
+.vehicleIcon {
+    font-size: 24px;
+    margin-bottom: 8px;
+}
+
+.vehicleLabel {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.vehiclePrice {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* === STYLE BARU UNTUK CHECKOUT & STRUK === */
+.receiptArea {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    font-family: 'Courier New', Courier, monospace;
+    /* Font struk */
+}
+
+.receiptRow {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #333;
+}
+
+/* Dropdown Area */
+.selectArea {
+    width: 100%;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #E5E7EB;
+    font-size: 16px;
+    margin-top: 20px;
+    background: white;
+    cursor: pointer;
+}
+
+/* Tombol Submit Besar */
+.btnSubmit {
+    width: 100%;
+    margin-top: 30px;
+    padding: 18px;
+    background: #204DD2;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.btnSubmit:hover {
+    background: #1a3fb0;
+}
+
+.btnSubmit:disabled {
+    background: #9CA3AF;
+    cursor: not-allowed;
+}
+
+/* --- BAGIAN KANAN (STATISTIK) --- */
+
+.statCard {
+    background: linear-gradient(135deg, #204DD2 0%, #3B82F6 100%);
+    color: white;
+    border-radius: 16px;
+    padding: 30px;
+    margin-bottom: 25px;
+    box-shadow: 0 10px 25px rgba(32, 77, 210, 0.25);
+}
+
+.statNumber {
+    font-size: 64px;
+    font-weight: 800;
+    line-height: 1;
+    margin: 10px 0;
+}
+
+.statLabel {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+/* List History Sederhana */
+.historyItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    border-bottom: 1px solid #F3F4F6;
+}
+
+.historyPlat {
+    font-weight: 700;
+    color: #1F2937;
+}
+
+.historyMeta {
+    font-size: 12px;
+    color: #6B7280;
+}
+
+.badge {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.badgeMasuk {
+    background: #ECFDF5;
+    color: #059669;
+}
+
+/* === REFINED CHECKOUT LAYOUT === */
+.checkoutGrid {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 40px;
+    align-items: start;
+}
+
+.leftSide,
+.rightSide {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Parked Vehicles List */
+.parkedList {
+    height: 600px;
+    overflow-y: auto;
+    padding-right: 10px;
+    margin-top: 15px;
+}
+
+.parkedList::-webkit-scrollbar {
+    width: 6px;
+}
+
+.parkedList::-webkit-scrollbar-thumb {
+    background-color: #E5E7EB;
+    border-radius: 10px;
+}
+
+.parkedItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: white;
+    border: 1px solid #F3F4F6;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.parkedItem:hover {
+    border-color: #204DD2;
+    background: #F9FAFB;
+    transform: translateX(4px);
+}
+
+.parkedItemActive {
+    border-color: #204DD2;
+    background: #EFF6FF;
+}
+
+.itemInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.itemPlat {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.itemMeta {
+    font-size: 12px;
+    color: #6B7280;
+}
+
+/* Detail Display */
+.infoGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.infoBox {
+    padding: 16px;
+    background: #F9FAFB;
+    border-radius: 12px;
+    border: 1px solid transparent;
+}
+
+.infoLabel {
+    font-size: 11px;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.infoValue {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+}
+
+/* Price Banner */
+.priceBanner {
+    text-align: center;
+    padding: 32px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    transition: all 0.3s ease;
+}
+
+.priceBannerPending {
+    background: #EFF6FF;
+    border: 1px solid #DBEAFE;
+}
+
+.priceBannerSuccess {
+    background: #ECFDF5;
+    border: 1px solid #D1FAE5;
+}
+
+.priceTitle {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.priceValue {
+    font-size: 40px;
+    font-weight: 800;
+}
+
+.priceMeta {
+    font-size: 12px;
+    margin-top: 8px;
+    color: #4B5563;
+}
+
+/* Search Bar for List */
+.listSearchWrapper {
+    margin-bottom: 20px;
+}
+
+.listSearchInput {
+    width: 100%;
+    padding: 14px 18px;
+    border-radius: 12px;
+    border: 1px solid #E5E7EB;
+    background: #F9FAFB;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.listSearchInput:focus {
+    border-color: #204DD2;
+    background: white;
+}
+
+/* Success Buttons gap */
+.actionGroup {
+    display: flex;
+    gap: 16px;
+}
+
+.btnSecondary {
+    background: #6B7280;
+}
+
+.btnSecondary:hover {
+    background: #4B5563;
+}
+
+.btnSuccess {
+    background: #10B981;
+}
+
+.btnSuccess:hover {
+    background: #059669;
+}
+
+/* === MODAL STRUK ONLINE === */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modalContent {
+    background: white;
+    width: 100%;
+    max-width: 450px;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+    animation: modalShift 0.3s ease-out;
+}
+
+@keyframes modalShift {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modalHeader {
+    text-align: center;
+    margin-bottom: 25px;
+}
+
+.modalHeader h2 {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    margin-bottom: 5px;
+}
+
+.modalHeader p {
+    color: #6B7280;
+    font-size: 14px;
+}
+
+/* Struk Look */
+.receiptPaper {
+    background: #F9FAFB;
+    border: 1px dashed #D1D5DB;
+    padding: 24px;
+    border-radius: 12px;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.receiptDivider {
+    border-top: 1px dashed #D1D5DB;
+    margin: 15px 0;
+}
+
+.receiptItem {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.receiptLabel {
+    color: #6B7280;
+}
+
+.receiptValue {
+    font-weight: 700;
+    color: #111827;
+}
+
+.receiptTotal {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 20px;
+    font-weight: 800;
+    color: #204DD2;
+    margin-top: 10px;
+}
+
+.modalFooter {
+    margin-top: 30px;
+    display: flex;
+    justify-content: center;
+}
+
+.btnOk {
+    padding: 12px 60px;
+    background: #204DD2;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btnOk:hover {
+    background: #1a3fb0;
+    transform: translateY(-2px);
+}
+====================
+
+src/app/globals.css :
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #F2F3F7;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
+  }
+}
+====================
+
+src/app/layout.js :
+// import font poppins dari library google font bawaan next.js
+import { Poppins } from "next/font/google";
+// import file css global untuk styling dasar aplikasi
+import "./globals.css";
+
+// konfigurasi font poppins, kita ambil beberapa ketebalan (weight)
+const poppins = Poppins({
+  variable: "--font-poppins", // variabel css biar bisa dipake di file lain
+  subsets: ["latin"], // subset karakter latin (abc...)
+  weight: ["300", "400", "500", "600", "700"], // variasi tebal font
+});
+
+// metadata untuk informasi website di tab browser dan seo
+export const metadata = {
+  title: "FlashPark",
+  description: "Parking App System",
+
+  // ikon kecil di tab browser (favicon)
+  icons: {
+    icon: '/logo-metadata.svg',
+  },
+};
+
+// komponen utama layout yang membungkus seluruh aplikasi
+// children = isi halaman yang sedang dibuka user
+export default function RootLayout({ children }) {
+  return (
+    // tag html utama, set bahasa inggris
+    <html lang="en">
+      {/* tag body, tempat semua konten tampil */}
+      {/* kita masukin class font poppins disini biar ngefek ke semua */}
+      <body className={poppins.className}>
+        {children}
+      </body>
+    </html>
+  );
+}
+
+====================
+
+src/app/page.js :
+import { redirect } from "next/navigation";
+
+export default function Home() {
+  redirect("/signin");
+}
+====================
+
+src/app/page.module.css :
+.page {
+  --background: #fafafa;
+  --foreground: #fff;
+
+  --text-primary: #000;
+  --text-secondary: #666;
+
+  --button-primary-hover: #383838;
+  --button-secondary-hover: #f2f2f2;
+  --button-secondary-border: #ebebeb;
+
+  display: flex;
+  min-height: 100vh;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-geist-sans);
+  background-color: var(--background);
+}
+
+.main {
+  display: flex;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 800px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  background-color: var(--foreground);
+  padding: 120px 60px;
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 24px;
+}
+
+.intro h1 {
+  max-width: 320px;
+  font-size: 40px;
+  font-weight: 600;
+  line-height: 48px;
+  letter-spacing: -2.4px;
+  text-wrap: balance;
+  color: var(--text-primary);
+}
+
+.intro p {
+  max-width: 440px;
+  font-size: 18px;
+  line-height: 32px;
+  text-wrap: balance;
+  color: var(--text-secondary);
+}
+
+.intro a {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.ctas {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  max-width: 440px;
+  gap: 16px;
+  font-size: 14px;
+}
+
+.ctas a {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 128px;
+  border: 1px solid transparent;
+  transition: 0.2s;
+  cursor: pointer;
+  width: fit-content;
+  font-weight: 500;
+}
+
+a.primary {
+  background: var(--text-primary);
+  color: var(--background);
+  gap: 8px;
+}
+
+a.secondary {
+  border-color: var(--button-secondary-border);
+}
+
+/* Enable hover only on non-touch devices */
+@media (hover: hover) and (pointer: fine) {
+  a.primary:hover {
+    background: var(--button-primary-hover);
+    border-color: transparent;
+  }
+
+  a.secondary:hover {
+    background: var(--button-secondary-hover);
+    border-color: transparent;
+  }
+}
+
+@media (max-width: 600px) {
+  .main {
+    padding: 48px 24px;
+  }
+
+  .intro {
+    gap: 16px;
+  }
+
+  .intro h1 {
+    font-size: 32px;
+    line-height: 40px;
+    letter-spacing: -1.92px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .logo {
+    filter: invert();
+  }
+
+  .page {
+    --background: #000;
+    --foreground: #000;
+
+    --text-primary: #ededed;
+    --text-secondary: #999;
+
+    --button-primary-hover: #ccc;
+    --button-secondary-hover: #1a1a1a;
+    --button-secondary-border: #1a1a1a;
+  }
+}
+
+====================
+
+src/app/signin/page.js :
+// import komponen layout khusus untuk halaman autentikasi (login/register)
+// authlayout ini biasanya punya styling berbeda dari dashboard
+import { AuthLayout } from "@/components/layouts/auth-layout";
+
+// import komponen view halaman sign in yang berisi form username dan password
+import { SignInPageView } from "@/components/auth/sign-in-page";
+
+// fungsi utama halaman signin, ini yang di-render saat user buka /signin
+export default function Page() {
+  return (
+    // authlayout membungkus seluruh halaman login dengan styling khusus
+    <AuthLayout>
+      {/* signinpageview adalah form login yang sebenarnya */}
+      <SignInPageView />
+    </AuthLayout>
+  );
+}
+
+
+====================
+
+src/app/test-route/page.js :
+export default function TestPage() {
+    return (
+        <div style={{ padding: '20px' }}>
+            <h1>Testing Routing</h1>
+            <p>If you see this, routing is working.</p>
+        </div>
+    );
+}
+
+====================
+
+src/components/auth/sign-in-page.js :
+// "use client" = komponen ini jalan di browser user (butuh interaksi)
+"use client";
+
+// useFormState = hook dari react buat handle state form + server action
+import { useActionState } from "react";
+
+// import fungsi loginAction dari file actions.js
+import { loginAction } from "@/features/authentication/actions";
+
+// import styling css module
+import styles from "./sign-in-page.module.css";
+
+// state awal, error masih kosong
+const initialState = {
+    error: "",
+};
+
+// komponen utama halaman login
+export function SignInPageView() {
+    // useActionState nge-connect form kita ke server action
+    // state = isinya error message (kalo ada)
+    // formAction = fungsi yg dipanggil pas form di-submit
+    // isPending = status loading
+    const [state, formAction, isPending] = useActionState(loginAction, initialState);
+
+    return (
+        // container utama halaman login
+        <div className={styles.container}>
+            {/* judul halaman */}
+            <h1 className={styles.title}>Masuk ke FlashPark</h1>
+            {/* sub judul */}
+            <p className={styles.subtitle}>Sistem Manajemen Parkir Modern</p>
+
+            {/* form login, action-nya langsung ke server */}
+            <form action={formAction} className={styles.form}>
+                {/* input username */}
+                <div className={styles.inputGroup}>
+                    <label htmlFor="username" className={styles.label}>Username</label>
+                    <input
+                        id="username"
+                        name="username" // name ini penting, diambil di server pake formData.get("username")
+                        type="text"
+                        placeholder="Masukkan username"
+                        required // wajib diisi
+                        className={styles.input}
+                    />
+                </div>
+
+                {/* input password */}
+                <div className={styles.inputGroup}>
+                    <label htmlFor="password" className={styles.label}>Password</label>
+                    <input
+                        id="password"
+                        name="password"
+                        type="password" // type password = karakter di-hide
+                        placeholder="Masukkan password"
+                        required
+                        className={styles.input}
+                    />
+                </div>
+
+                {/* kalo ada error dari server, tampilin di sini */}
+                {state?.error && (
+                    <div className={styles.error}>
+                        {state.error}
+                    </div>
+                )}
+
+                {/* tombol submit */}
+                <button type="submit" className={styles.button}>
+                    Masuk Sekarang
+                </button>
+            </form>
+        </div>
+    );
+}
+
+====================
+
+src/components/auth/sign-in-page.module.css :
+.container {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: 800;
+    color: #1F2937;
+    margin-bottom: 8px;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: #6B7280;
+    margin-bottom: 32px;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    text-align: left;
+}
+
+.inputGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.input {
+    width: 100%;
+    padding: 14px 18px;
+    font-size: 15px;
+    border: 1px solid #E5E7EB;
+    border-radius: 12px;
+    background: white;
+    color: #1F2937;
+    transition: all 0.2s;
+}
+
+.input::placeholder {
+    color: #9CA3AF;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.button {
+    margin-top: 10px;
+    padding: 14px;
+    background: #4F46E5;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.button:hover {
+    background: #4338CA;
+}
+
+.error {
+    background: #FEE2E2;
+    color: #B91C1C;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+}
+====================
+
+src/components/forms/transaction-form/index.js :
+"use client";
+import { useState } from "react";
+import { checkInKendaraan } from "@/features/transactions/actions";
+import styles from "@/app/dashboard/petugas/styles.module.css";
+
+export default function TransactionForm({ tarifList, areaList, userId }) {
+    const [loading, setLoading] = useState(false);
+    const [plat, setPlat] = useState(""); // State untuk menyimpan text Plat
+
+    // FUNGSI SAKTI: Auto Format Plat Nomor (Simplified)
+    const handlePlatChange = (e) => {
+        // Hanya paksa huruf besar, biarkan user mengetik spasi manual jika mau
+        // atau kita bisa format sederhana saja
+        let val = e.target.value.toUpperCase();
+        setPlat(val);
+    };
+
+    async function handleSubmit(formData) {
+        setLoading(true);
+        const result = await checkInKendaraan(formData);
+
+        if (result.success) {
+            window.location.reload();
+        } else {
+            alert("Gagal: " + result.error);
+            setLoading(false);
+        }
+    }
+
+    return (
+        <form action={handleSubmit}>
+            {/* 1. INPUT PLAT NOMOR (Sudah Auto Format) */}
+            <div>
+                <label style={{ display: 'none' }}>Plat Nomor</label>
+                <input
+                    className={styles.inputPlat}
+                    name="plat_nomor"
+                    type="text"
+                    placeholder="D 1234 ABC"
+                    required
+                    autoComplete="off"
+                    maxLength={11} // Membatasi panjang karakter biar ga kepanjangan
+                    value={plat}   // Kunci: Nilai input diatur oleh State
+                    onChange={handlePlatChange} // Panggil fungsi sakti tiap ngetik
+                />
+            </div>
+
+            {/* 2. PILIHAN KENDARAAN */}
+            <div className={styles.vehicleGroup}>
+                {tarifList.map((item) => (
+                    <label key={item.id_tarif} className={styles.vehicleOption}>
+                        <input
+                            type="radio"
+                            name="id_tarif"
+                            value={item.id_tarif}
+                            required
+                            className={styles.vehicleRadio}
+                        />
+                        <div className={styles.vehicleCard}>
+                            <div className={styles.vehicleIcon}>
+                                {item.jenis_kendaraan.toLowerCase().includes('mobil') ? '🚗' : '🏍️'}
+                            </div>
+                            <div className={styles.vehicleLabel}>{item.jenis_kendaraan}</div>
+                            <div className={styles.vehiclePrice}>Rp {parseInt(item.tarif_per_jam).toLocaleString()}/jam</div>
+                        </div>
+                    </label>
+                ))}
+            </div>
+
+            {/* 3. PILIHAN AREA */}
+            <select name="id_area" required className={styles.selectArea}>
+                <option value="">-- Pilih Lokasi Parkir --</option>
+                {areaList.map((area) => (
+                    <option key={area.id_area} value={area.id_area}>
+                        📍 {area.nama_area} — (Sisa: {area.kapasitas - (area.terisi || 0)})
+                    </option>
+                ))}
+            </select>
+
+            {/* HIDDEN INPUT */}
+            <input type="hidden" name="id_user" value={userId} />
+
+            {/* 4. TOMBOL SUBMIT */}
+            <button type="submit" className={styles.btnSubmit} disabled={loading}>
+                {loading ? "Memproses..." : "Cetak Karcis Masuk"}
+            </button>
+
+        </form>
+    );
+}
+
+====================
+
+src/components/layouts/admin-layout/index.js :
+import { Sidebar } from "../shared/sidebar";
+import styles from './styles.module.css';
+
+export const DashboardLayout = ({ children, activePage }) => {
+  return (
+    <div className={styles.container}>
+      <Sidebar activePage={activePage} />
+      <main className={styles.mainContent}>
+        {children}
+      </main>
+    </div>
+  );
+};
+====================
+
+src/components/layouts/admin-layout/styles.module.css :
+.container {
+  min-height: 100vh;
+  background-color: #F2F3F7;
+  /* Sesuai Background Gambar */
+  font-family: 'Inter', sans-serif;
+  /* Pastikan font mirip */
+}
+
+.mainContent {
+  margin-left: 260px;
+  /* Memberi ruang untuk sidebar fixed */
+  padding: 40px;
+  min-height: 100vh;
+  width: calc(100% - 260px);
+}
+====================
+
+src/components/layouts/auth-layout/index.js :
+import Image from "next/image";
+import styles from './styles.module.css';
+
+export const AuthLayout = ({ children }) => (
+    <div className={styles.container}>
+        {/* Header Logo */}
+        <div className={styles.header}>
+            <div className={styles.logoContainer}>
+                {/* Mengarah ke public/Logo (1).svg */}
+                <Image
+                    src="/Logo (1).svg"
+                    alt="FlashPark Logo"
+                    fill
+                    style={{ objectFit: 'contain' }}
+                />
+            </div>
+        </div>
+
+        {/* Card Putih */}
+        <div className={styles.card}>
+            {children}
+        </div>
+    </div>
+);
+====================
+
+src/components/layouts/auth-layout/styles.module.css :
+.container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #F2F3F7;
+    font-family: sans-serif;
+    padding: 20px;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 30px;
+    width: 100%;
+}
+
+.logoContainer {
+    position: relative;
+    width: 180px;
+    height: 60px;
+}
+
+.card {
+    background-color: #FFFFFF;
+    width: 100%;
+    max-width: 450px;
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+====================
+
+src/components/layouts/owner-layout/index.js :
+import Link from "next/link";
+import Image from "next/image";
+import styles from './styles.module.css';
+import { logoutAction } from "@/features/authentication/actions";
+
+export const OwnerLayout = ({ children, activePage }) => {
+
+    // Menu khusus Owner
+    const menuItems = [
+        { name: "Dashboard", path: "/dashboard/owner", icon: "dashboard-icon" },
+        // Nanti bisa tambah menu lain seperti "Laporan Detail" jika perlu
+    ];
+
+    return (
+        <div className={styles.container}>
+            {/* SIDEBAR */}
+            <aside className={styles.sidebar}>
+                <div className={styles.logoArea}>
+                    <Image src="/Logo (1).svg" alt="FlashPark" width={160} height={60} priority />
+                </div>
+
+                <div className={styles.menuGroup}>
+                    <div className={styles.menuTitle}>Menu Owner</div>
+                    {menuItems.map((item) => {
+                        const isActive = activePage === item.name;
+                        // Pakai icon yang sama dengan layout lain untuk konsistensi
+                        const iconSrc = isActive
+                            ? `/sidebar/${item.icon}-active.svg`
+                            : `/sidebar/${item.icon}.svg`;
+
+                        return (
+                            <Link
+                                key={item.name}
+                                href={item.path}
+                                className={`${styles.menuItem} ${isActive ? styles.activeMenu : ''}`}
+                            >
+                                <div style={{ position: 'relative', width: '20px', height: '20px' }}>
+                                    <Image
+                                        src={iconSrc}
+                                        alt={item.name}
+                                        fill
+                                        style={{ objectFit: 'contain' }}
+                                    />
+                                </div>
+                                <span>{item.name}</span>
+                            </Link>
+                        );
+                    })}
+                </div>
+
+                <div className={styles.footer}>
+                    <form action={logoutAction}>
+                        <button
+                            type="submit"
+                            className={styles.menuItem}
+                            style={{
+                                cursor: 'pointer',
+                                color: '#1A1A1A',
+                                width: '100%',
+                                border: 'none',
+                                textAlign: 'left',
+                                fontSize: 'inherit',
+                                fontFamily: 'inherit',
+                                background: 'transparent'
+                            }}
+                        >
+                            <Image src="/sidebar/logout-icon.svg" alt="Logout" width={20} height={20} />
+                            <span style={{ marginLeft: '10px' }}>Log Out</span>
+                        </button>
+                    </form>
+                </div>
+            </aside>
+
+            {/* MAIN CONTENT */}
+            <main className={styles.mainContent}>
+                {children}
+            </main>
+        </div>
+    );
+};
+
+====================
+
+src/components/layouts/owner-layout/styles.module.css :
+/* Copy dari OwnerLayout.module.css untuk konsistensi */
+.container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #F9FAFB;
+}
+
+.sidebar {
+    width: 260px;
+    background: white;
+    border-right: 1px solid #E5E7EB;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.logoArea {
+    padding: 30px 20px;
+    border-bottom: 1px solid #E5E7EB;
+    text-align: center;
+}
+
+.menuGroup {
+    flex: 1;
+    padding: 20px 0;
+}
+
+.menuTitle {
+    padding: 0 20px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6B7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+}
+
+.menuItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    margin: 4px 16px;
+    border-radius: 8px;
+    color: #1A1A1A;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.menuItem:hover {
+    transform: translateX(4px);
+}
+
+.activeMenu {
+    background-color: #204DD2;
+    /* Konsisten: Biru Tua */
+    color: #FFFFFF;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(32, 77, 210, 0.25);
+}
+
+.footer {
+    padding: 20px;
+    border-top: 1px solid #E5E7EB;
+}
+
+.mainContent {
+    flex: 1;
+    margin-left: 260px;
+    padding: 40px;
+    overflow-y: auto;
+}
+====================
+
+src/components/layouts/petugas-layout/index.js :
+// ===== import dependencies =====
+
+// link = komponen buat navigasi antar halaman tanpa reload (spa-style)
+// bedanya sama <a> biasa: link lebih cepet karena ga reload seluruh page
+import Link from "next/link";
+
+// image = komponen gambar dari next.js, otomatis optimize ukuran gambar
+// lebih bagus dari <img> biasa karena ada lazy loading & responsive
+import Image from "next/image";
+
+// import styling css module, nanti dipake jadi styles.namaclass
+import styles from './styles.module.css';
+
+// import fungsi logout dari actions.js
+import { logoutAction } from "@/features/authentication/actions";
+
+// ===== komponen utama layout petugas =====
+
+// ini komponen layout yang membungkus semua halaman petugas
+// children = isi konten halaman yang dibungkus
+// activepage = nama halaman yang aktif, buat highlight menu
+export const PetugasLayout = ({ children, activePage }) => {
+
+    // daftar menu sidebar untuk petugas
+    // setiap item punya: name (label), path (url), icon (nama file icon)
+    const menuItems = [
+        { name: "Dashboard", path: "/dashboard/petugas", icon: "dashboard-icon" },
+        { name: "Transaksi Keluar", path: "/dashboard/petugas/keluar", icon: "transaction" },
+    ];
+
+    // return = yang ditampilin ke browser
+    return (
+        // container utama, pake flexbox (sidebar + content)
+        <div className={styles.container}>
+
+            {/* ===== sidebar (menu samping kiri) ===== */}
+            <aside className={styles.sidebar}>
+
+                {/* bagian logo di atas */}
+                <div className={styles.logoArea}>
+                    {/* image component dari next.js */}
+                    {/* src = path file gambar (dari folder public) */}
+                    {/* width & height = ukuran gambar */}
+                    {/* priority = load duluan (penting banget) */}
+                    <Image src="/Logo (1).svg" alt="FlashPark" width={160} height={60} priority />
+                </div>
+
+                {/* ===== bagian menu navigasi ===== */}
+                <div className={styles.menuGroup}>
+                    {/* judul grup menu */}
+                    <div className={styles.menuTitle}>Menu Petugas</div>
+
+                    {/* loop semua item menu pake .map() */}
+                    {/* .map() = fungsi buat ubah array jadi list komponen */}
+                    {menuItems.map((item) => {
+
+                        // cek apakah menu ini yg lagi aktif
+                        // kalo activepage sama dgn item.name = true
+                        const isActive = activePage === item.name;
+
+                        // pilih icon yg sesuai (active = beda warna)
+                        // kalo aktif pake icon-active.svg, kalo ga pake icon.svg
+                        const iconSrc = isActive
+                            ? `/sidebar/${item.icon}-active.svg`
+                            : `/sidebar/${item.icon}.svg`;
+
+                        // return komponen link untuk setiap menu
+                        return (
+                            // link = hyperlink tapi tanpa reload halaman
+                            <Link
+                                key={item.name} // key wajib di react, untuk identify item unik
+                                href={item.path} // url tujuan
+                                // classname gabungan: style dasar + style aktif (kalo lagi aktif)
+                                className={`${styles.menuItem} ${isActive ? styles.activeMenu : ''}`}
+                            >
+                                {/* container icon */}
+                                <div style={{ position: 'relative', width: '20px', height: '20px' }}>
+                                    {/* image fill = gambar ngikutin ukuran parent */}
+                                    <Image
+                                        src={iconSrc}
+                                        alt={item.name}
+                                        fill // fill = isi penuh container
+                                        style={{ objectFit: 'contain' }} // contain = jaga proporsi
+                                    />
+                                </div>
+                                {/* label menu */}
+                                <span>{item.name}</span>
+                            </Link>
+                        );
+                    })}
+                </div>
+
+                {/* ===== bagian logout (di bawah sidebar) ===== */}
+                <div className={styles.footer}>
+                    {/* form logout, action langsung ke server action */}
+                    <form action={logoutAction}>
+                        {/* tombol submit yang di-style jadi kayak menu item */}
+                        <button
+                            type="submit"
+                            className={styles.menuItem}
+                            style={{
+                                cursor: 'pointer', // cursor tangan
+                                color: '#1A1A1A', // warna teks hitam
+                                width: '100%', // lebar penuh
+                                border: 'none', // tanpa border
+                                textAlign: 'left', // teks rata kiri
+                                fontSize: 'inherit', // ikutin font size parent
+                                fontFamily: 'inherit', // ikutin font family parent
+                                background: 'transparent' // background transparan
+                            }}
+                        >
+                            {/* icon logout */}
+                            <Image src="/sidebar/logout-icon.svg" alt="Logout" width={20} height={20} />
+                            {/* label logout */}
+                            <span style={{ marginLeft: '10px' }}>Log Out</span>
+                        </button>
+                    </form>
+                </div>
+            </aside>
+
+            {/* ===== main content (area konten utama) ===== */}
+            <main className={styles.mainContent}>
+                {/* children = isi halaman yang dibungkus layout ini */}
+                {/* misal: <Petugaslayout><Kontendashboard /></Petugaslayout> */}
+                {/* maka children = <Kontendashboard /> */}
+                {children}
+            </main>
+        </div>
+    );
+};
+
+====================
+
+src/components/layouts/petugas-layout/styles.module.css :
+/* Copy dari DashboardLayout.module.css untuk konsistensi */
+.container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #F9FAFB;
+}
+
+.sidebar {
+  width: 260px;
+  background: white;
+  border-right: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.logoArea {
+  padding: 30px 20px;
+  border-bottom: 1px solid #E5E7EB;
+  text-align: center;
+}
+
+.menuGroup {
+  flex: 1;
+  padding: 20px 0;
+}
+
+.menuTitle {
+  padding: 0 20px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6B7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 10px;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  margin: 4px 16px;
+  border-radius: 8px;
+  color: #1A1A1A;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: transparent;
+}
+
+.menuItem:hover {
+  transform: translateX(4px);
+}
+
+.activeMenu {
+  background-color: #204DD2;
+  color: #FFFFFF;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(32, 77, 210, 0.25);
+}
+
+.footer {
+  padding: 20px;
+  border-top: 1px solid #E5E7EB;
+}
+
+.mainContent {
+  flex: 1;
+  margin-left: 260px;
+  padding: 40px;
+  overflow-y: auto;
+}
+====================
+
+src/components/layouts/shared/sidebar.js :
+import Link from "next/link";
+import Image from "next/image";
+import styles from './sidebar.module.css';
+import { logoutAction } from "@/features/authentication/actions";
+
+export const Sidebar = ({ activePage }) => {
+  // Data Menu untuk memudahkan mapping dan maintenance
+  const menuItems = [
+    { name: "Dashboard", path: "/dashboard/admin", icon: "dashboard-icon" },
+    { name: "Data User", path: "/dashboard/admin/users", icon: "data-user-icon" },
+    // Asumsi nama file tarif mengikuti pola
+    { name: "Data Tarif", path: "/dashboard/admin/tarif", icon: "data-tarif-icon" },
+    { name: "Data Area", path: "/dashboard/admin/area", icon: "data-area-icon" },
+    { name: "Log Aktivitas", path: "/dashboard/admin/logs", icon: "log-aktivitas-icon" },
+  ];
+
+  return (
+    <aside className={styles.sidebar}>
+      {/* 1. Logo Section */}
+      <div className={styles.logoArea}>
+        <Image src="/Logo (1).svg" alt="FlashPark" width={160} height={60} priority />
+      </div>
+
+      {/* 2. Menu Navigation */}
+      <div className={styles.menuGroup}>
+        <div className={styles.menuTitle}>Main Menu</div>
+
+        {menuItems.map((item) => {
+          const isActive = activePage === item.name;
+
+          // Logic: Jika aktif, ambil file *-active.svg, jika tidak ambil file .svg biasa
+          const iconSrc = isActive
+            ? `/sidebar/${item.icon}-active.svg`
+            : `/sidebar/${item.icon}.svg`;
+
+          return (
+            <Link
+              key={item.name}
+              href={item.path}
+              className={`${styles.menuItem} ${isActive ? styles.activeMenu : ''}`}
+            >
+              {/* Icon Image */}
+              <div style={{ position: 'relative', width: '20px', height: '20px' }}>
+                <Image
+                  src={iconSrc}
+                  alt={item.name}
+                  fill
+                  style={{ objectFit: 'contain' }}
+                />
+              </div>
+              <span>{item.name}</span>
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* 3. Logout Section */}
+      <div className={styles.footer}>
+        <form action={logoutAction}>
+          <button
+            type="submit"
+            className={styles.menuItem}
+            style={{
+              cursor: 'pointer',
+              color: '#1A1A1A',
+              width: '100%',
+              border: 'none',
+              textAlign: 'left',
+              fontSize: 'inherit',
+              fontFamily: 'inherit'
+            }}
+          >
+            <Image src="/sidebar/logout-icon.svg" alt="Logout" width={20} height={20} />
+            <span style={{ marginLeft: '10px' }}>Log Out</span>
+          </button>
+        </form>
+      </div>
+    </aside>
+  );
+};
+====================
+
+src/components/layouts/shared/sidebar.module.css :
+.sidebar {
+  width: 260px;
+  background-color: #FFFFFF;
+  display: flex;
+  flex-direction: column;
+  padding: 30px;
+  border-right: 1px solid #E5E7EB;
+  position: fixed;
+  /* Agar sidebar tetap diam saat scroll */
+  height: 100vh;
+  left: 0;
+  top: 0;
+}
+
+.logoArea {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 50px;
+}
+
+.brandName {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0D1421;
+}
+
+.menuGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.menuTitle {
+  font-size: 12px;
+  color: #9CA3AF;
+  margin-bottom: 10px;
+  margin-left: 10px;
+}
+
+/* Menu Item Default (Inactive) */
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #4B5563;
+  /* Abu-abu gelap */
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background-color: transparent;
+}
+
+.menuItem:hover {
+  transform: translateX(4px);
+}
+
+/* Menu Item Active (Biru) */
+.activeMenu {
+  background-color: #204DD2;
+  color: #FFFFFF;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(32, 77, 210, 0.25);
+}
+
+.footer {
+  margin-top: auto;
+}
+====================
+
+src/components/ui/buttons/button.js :
+import styles from './button.module.css';
+
+// Perhatikan kata "export" di depan const
+export const Button = ({ children, type = "button", ...props }) => (
+  <button
+    type={type}
+    className={styles.btnPrimary}
+    {...props}
+  >
+    {children}
+  </button>
+);
+====================
+
+src/components/ui/buttons/button.module.css :
+.btnPrimary {
+  width: 100%;
+  height: 48px;
+  background-color: #204DD2;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  margin-top: 10px;
+}
+
+.btnPrimary:hover {
+  background-color: #1a3fb0;
+}
+====================
+
+src/components/ui/buttons/export-button.js :
+"use client";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { useSearchParams } from "next/navigation";
+
+export default function ExportButton({ stats, chartData }) {
+    const searchParams = useSearchParams();
+    const startDate = searchParams.get("startDate");
+    const endDate = searchParams.get("endDate");
+
+    const handleExport = () => {
+        const doc = new jsPDF();
+
+        // 1. Header Laporan
+        doc.setFontSize(18);
+        doc.text("LAPORAN KEUANGAN FLASHPARK", 14, 20);
+
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Periode: ${startDate && endDate ? `${startDate} s/d ${endDate}` : 'Hari Ini'}`, 14, 28);
+        doc.text(`Tanggal Cetak: ${new Date().toLocaleString('id-ID')}`, 14, 33);
+        doc.text("Dicetak Oleh: Pemilik", 14, 38);
+
+        // 2. Ringkasan Statistik
+        const summaryData = [
+            [startDate && endDate ? "Total Pendapatan (Periode)" : "Pendapatan Hari Ini", `Rp ${stats.today.toLocaleString()}`],
+            ["Pendapatan Bulan Ini", `Rp ${stats.month.toLocaleString()}`],
+            ["Total Transaksi", `${stats.totalTransactions} Kendaraan`]
+        ];
+
+        autoTable(doc, {
+            startY: 45,
+            head: [['Metrik', 'Nilai']],
+            body: summaryData,
+            theme: 'grid',
+            headStyles: { fillColor: [32, 77, 210] }, // Biru Flashpark
+        });
+
+        // 3. Detail Data Harian (dari Chart Data)
+        doc.text(`Rincian Pendapatan ${startDate && endDate ? 'Per Hari' : '7 Hari Terakhir'}:`, 14, doc.lastAutoTable.finalY + 15);
+
+        const detailData = chartData.map(item => [
+            item.date,
+            `Rp ${item.revenue.toLocaleString()}`
+        ]);
+
+        autoTable(doc, {
+            startY: doc.lastAutoTable.finalY + 20,
+            head: [['Tanggal', 'Pendapatan']],
+            body: detailData,
+            theme: 'striped',
+        });
+
+        // 4. Footer
+        const finalY = doc.lastAutoTable.finalY + 20;
+        doc.setFontSize(10);
+        doc.text("Auto-generated by FlashPark System", 14, finalY);
+
+        // Save PDF
+        doc.save(`Laporan_Keuangan_${new Date().toISOString().split('T')[0]}.pdf`);
+    };
+
+    return (
+        <button
+            onClick={handleExport}
+            style={{
+                backgroundColor: '#10B981',
+                color: 'white',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '8px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+            }}
+        >
+            <span>📄 Download Laporan PDF</span>
+        </button>
+    );
+}
+
+====================
+
+src/components/ui/buttons/index.js :
+export { Button } from './button';
+export { ExportButton } from './export-button';
+
+====================
+
+src/components/ui/inputs/index.js :
+export { Input } from './input';
+
+====================
+
+src/components/ui/inputs/input.js :
+import styles from './input.module.css';
+
+export const Input = ({ label, type = "text", ...props }) => (
+  <div className={styles.inputGroup}>
+    <label className={styles.label}>
+      {label}
+    </label>
+    <input
+      type={type}
+      className={styles.inputField}
+      {...props}
+    />
+  </div>
+);
+====================
+
+src/components/ui/inputs/input.module.css :
+.inputGroup {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.label {
+  display: block;
+  font-size: 14px;
+  font-weight: bold;
+  color: #1A1A1A;
+  margin-bottom: 8px;
+  margin-left: 4px;
+}
+
+.inputField {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  background-color: #F1F1F1;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 16px;
+  outline: none;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  /* Agar padding tidak menambah lebar */
+  color: #333333;
+}
+
+.inputField:focus {
+  border-color: #204DD2;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(32, 77, 210, 0.1);
+}
+====================
+
+src/components/ui/stats/index.js :
+export { StatCard } from './stat-card';
+
+====================
+
+src/components/ui/stats/stat-card.js :
+import Image from "next/image";
+import styles from './stat-card.module.css';
+
+export const StatCard = ({ title, value, iconPath }) => {
+  return (
+    <div className={styles.card}>
+      <div className={styles.textGroup}>
+        <span className={styles.title}>{title}</span>
+        <span className={styles.value}>{value}</span>
+      </div>
+      <div className={styles.iconWrapper}>
+        {/* Icon sudah punya background sendiri */}
+        <div style={{ position: 'relative', width: '48px', height: '48px' }}>
+          <Image
+            src={iconPath}
+            alt={title}
+            fill
+            style={{ objectFit: 'contain' }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+====================
+
+src/components/ui/stats/stat-card.module.css :
+.card {
+  background: white;
+  padding: 24px;
+  border-radius: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+  min-height: 140px;
+}
+
+.textGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Jarak antara judul dan nilai */
+}
+
+.title {
+  font-size: 14px;
+  color: #6B7280;
+  font-weight: 500;
+}
+
+.value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.iconWrapper {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  /* Background dihapus karena icon sudah punya background sendiri */
+}
+
+====================
+
+src/features/areas/actions/index.js :
+export { getArea, createArea, toggleAreaStatus } from './manage-areas.actions.js';
+
+====================
+
+src/features/areas/actions/manage-areas.actions.js :
+"use server";
+
+import prisma from "@/lib/database/prisma";
+import { revalidatePath } from "next/cache";
+
+export async function getArea() {
+    return await prisma.tb_area_parkir.findMany();
+}
+
+export async function createArea(formData) {
+    const nama = formData.get("nama_area");
+    const kapasitas = formData.get("kapasitas");
+
+    await prisma.tb_area_parkir.create({
+        data: {
+            nama_area: nama,
+            kapasitas: parseInt(kapasitas),
+            terisi: 0
+        },
+    });
+    revalidatePath("/dashboard/admin/area");
+}
+
+export async function toggleAreaStatus(formData) {
+    const id = parseInt(formData.get("id_area"));
+    const currentStatus = formData.get("is_active") === "true";
+
+    await prisma.tb_area_parkir.update({
+        where: { id_area: id },
+        data: { is_active: !currentStatus }
+    });
+
+    revalidatePath("/dashboard/admin/area");
+}
+
+====================
+
+src/features/authentication/actions/index.js :
+export { loginAction, logoutAction } from './login.actions.js';
+
+====================
+
+src/features/authentication/actions/login.actions.js :
+// ini artinya fungsi ini jalan di server, bukan di browser user
+"use server";
+
+// import prisma = ambil koneksi database kita
+import prisma from "@/lib/database/prisma";
+
+// redirect = buat pindah halaman otomatis setelah login sukses
+import { redirect } from "next/navigation";
+
+// cookies = buat simpan data session user di browser (kayak tanda dia udah login)
+import { cookies } from "next/headers";
+
+import { writeLog } from "@/features/logs/actions/log.action";
+
+// fungsi utama login, dipanggil pas user klik tombol "masuk"
+// prevState = state sebelumnya (buat error handling)
+// formData = data dari form (username & password)
+export async function loginAction(prevState, formData) {
+  // ambil username dari form
+  const username = formData.get("username");
+  // ambil password dari form
+  const password = formData.get("password");
+
+  // cek dulu, kalo ada yg kosong langsung tolak
+  if (!username || !password) {
+    return { error: "Username dan Password harus diisi!" };
+  }
+
+  // cari user di database berdasarkan username
+  // findFirst = ambil data pertama yg cocok
+  const user = await prisma.tb_user.findFirst({
+    where: { username: username },
+  });
+
+  // kalo user ga ketemu ATAU password salah, tolak
+  // ini validasi keamanan dasar
+  if (!user || user.password !== password) {
+    return { error: "Username atau Password salah!" };
+  }
+
+  // kalo sampe sini = login sukses!
+  // sekarang simpan session ke cookie browser
+
+  // ambil akses ke cookie store
+  const cookieStore = await cookies();
+
+  // simpan id user ke cookie, biar tau siapa yg login
+  cookieStore.set("session_user_id", user.id_user.toString(), {
+    httpOnly: true, // cookie ga bisa diakses javascript (lebih aman)
+    secure: process.env.NODE_ENV === "production", // https only di production
+    maxAge: 60 * 60 * 24 * 7, // berlaku 1 minggu
+    path: "/", // berlaku di semua halaman
+  });
+
+  // simpan juga role user (admin/petugas/owner)
+  cookieStore.set("session_role", user.role, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 60 * 60 * 24 * 7,
+    path: "/",
+  });
+
+  // catat log login
+  await writeLog(user.id_user, "Login ke sistem");
+
+  // sekarang redirect (pindah halaman) sesuai role user
+  if (user.role === "admin") {
+    // admin masuk ke dashboard admin
+    redirect("/dashboard/admin");
+  } else if (user.role === "petugas") {
+    // petugas masuk ke dashboard petugas
+    redirect("/dashboard/petugas");
+  } else if (user.role === "owner") {
+    // owner masuk ke dashboard owner
+    redirect("/dashboard/owner");
+  }
+
+  // kalo role ga dikenali (harusnya ga mungkin sih)
+  return { error: "Role tidak dikenali!" };
+}
+
+// fungsi logout, dipanggil pas user klik tombol keluar
+export async function logoutAction() {
+  const cookieStore = await cookies();
+
+  // ambil user id sebelum dihapus buat log
+  const userId = cookieStore.get("session_user_id")?.value;
+  if (userId) {
+    await writeLog(userId, "Logout dari sistem");
+  }
+
+  // hapus semua cookie session
+  cookieStore.delete("session_user_id");
+  cookieStore.delete("session_role");
+
+  // balik ke halaman login
+  redirect("/signin");
+}
+====================
+
+src/features/logs/actions/log.action.js :
+"use server";
+
+import prisma from "@/lib/database/prisma";
+
+export async function writeLog(id_user, aktivitas) {
+    if (!id_user || !aktivitas) return;
+
+    try {
+        await prisma.tb_log_aktivitas.create({
+            data: {
+                id_user: parseInt(id_user),
+                aktivitas: aktivitas,
+                waktu_aktivitas: new Date()
+            }
+        });
+    } catch (error) {
+        console.error("Failed to write log:", error);
+        // We don't want to break the main app flow if logging fails
+    }
+}
+
+====================
+
+src/features/logs/components/logs-filter/index.js :
+"use client";
+
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useDebouncedCallback } from "@/hooks/use-debounce";
+import styles from "@/app/dashboard/admin/admin.module.css";
+
+export function LogsFilter() {
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const { replace } = useRouter();
+
+    const handleSearch = useDebouncedCallback((term) => {
+        const params = new URLSearchParams(searchParams);
+        if (term) {
+            params.set("query", term);
+        } else {
+            params.delete("query");
+        }
+        replace(`${pathname}?${params.toString()}`);
+    }, 300);
+
+    const handleDateChange = (date) => {
+        const params = new URLSearchParams(searchParams);
+        if (date) {
+            params.set("date", date);
+        } else {
+            params.delete("date");
+        }
+        replace(`${pathname}?${params.toString()}`);
+    };
+
+    return (
+        <div className={styles.cardContainer} style={{ marginBottom: '20px', padding: '20px' }}>
+            <div className={styles.filterRow}>
+                <div className={styles.filterGroup}>
+                    <label className={styles.label}>Tanggal</label>
+                    <input
+                        type="date"
+                        className={styles.input}
+                        defaultValue={searchParams.get("date")?.toString()}
+                        onChange={(e) => handleDateChange(e.target.value)}
+                    />
+                </div>
+                <div className={styles.filterGroup} style={{ flex: 2 }}>
+                    <label className={styles.label}>Cari Aktivitas / User</label>
+                    <div className={styles.searchContainer}>
+                        <input
+                            type="text"
+                            className={styles.input}
+                            placeholder="Cari log aktivitas..."
+                            style={{ width: '100%' }}
+                            defaultValue={searchParams.get("query")?.toString()}
+                            onChange={(e) => handleSearch(e.target.value)}
+                        />
+                        <span className={styles.searchIcon}>🔍</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+====================
+
+src/features/reports/actions/get-dashboard-data.action.js :
+"use server";
+
+import prisma from "@/lib/database/prisma";
+import { revalidatePath } from "next/cache";
+
+export async function getDashboardData(params = {}) {
+    const { query, date, vehicle } = params;
+
+    const whereClause = {};
+
+    if (query) {
+        whereClause.plat_nomor = { contains: query };
+    }
+
+    if (date) {
+        const startDate = new Date(date);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999);
+
+        whereClause.waktu_masuk = {
+            gte: startDate,
+            lte: endDate
+        };
+    }
+
+    if (vehicle && vehicle !== 'Semua') {
+        whereClause.tb_tarif = {
+            jenis_kendaraan: vehicle
+        };
+    }
+
+    const transaksiTerbaru = await prisma.tb_transaksi.findMany({
+        where: whereClause,
+        take: 5,
+        orderBy: {
+            waktu_masuk: 'desc',
+        },
+        include: {
+            tb_user: true,
+            tb_tarif: true
+        }
+    });
+
+    const totalPendapatan = await prisma.tb_transaksi.aggregate({
+        _sum: { biaya_total: true }
+    });
+
+    const kendaraanMasuk = await prisma.tb_transaksi.count({
+        where: { status: 'masuk' }
+    });
+
+    const totalPetugas = await prisma.tb_user.count({
+        where: { role: 'petugas' }
+    });
+
+    const areaData = await prisma.tb_area_parkir.aggregate({
+        _sum: {
+            kapasitas: true,
+            terisi: true
+        }
+    });
+
+    const sisaSlot = (areaData._sum.kapasitas || 0) - (areaData._sum.terisi || 0);
+
+    return {
+        transaksi: transaksiTerbaru,
+        stats: {
+            pendapatan: totalPendapatan._sum.biaya_total || 0,
+            kendaraanMasuk,
+            sisaSlot,
+            totalPetugas
+        }
+    };
+}
+
+====================
+
+src/features/reports/actions/get-owner-reports.action.js :
+"use server";
+
+import prisma from "@/lib/database/prisma";
+
+// fungsi untuk ambil statistik ringkasan (hari ini, bulan ini, total transaksi)
+export async function getOwnerStats(params = {}) {
+    const { startDate, endDate } = params;
+
+    // default filter: hanya transaksi yang statusnya 'keluar' (sudah bayar)
+    let whereClause = { status: 'keluar' };
+
+    // logika filter tanggal (kalau ada input dari user)
+    if (startDate && endDate) {
+        whereClause.waktu_keluar = {
+            gte: new Date(startDate), // lebih besar dari start date
+            lte: new Date(new Date(endDate).setHours(23, 59, 59, 999)) // sampai akhir hari end date
+        };
+    } else {
+        // default: filter data hari ini saja
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // set jam ke 00:00:00
+        whereClause.waktu_keluar = { gte: today };
+    }
+
+    // hitung total pendapatan berdasarkan filter (hari ini atau range tanggal)
+    const revenueStats = await prisma.tb_transaksi.aggregate({
+        _sum: { biaya_total: true }, // jumlahkan kolom biaya_total
+        where: whereClause
+    });
+
+    // hitung pendapatan bulan ini (selalu dihitung terpisah dari filter tanggalcustom)
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1); // tanggal 1 bulan ini
+    const revenueMonth = await prisma.tb_transaksi.aggregate({
+        _sum: { biaya_total: true },
+        where: {
+            waktu_keluar: { gte: startOfMonth },
+            status: 'keluar'
+        }
+    });
+
+    // hitung total jumlah transaksi kendaraan
+    const totalTx = await prisma.tb_transaksi.count({
+        where: whereClause
+    });
+
+    // kembalikan object statistik
+    return {
+        today: parseInt(revenueStats._sum.biaya_total || 0),
+        month: parseInt(revenueMonth._sum.biaya_total || 0),
+        totalTransactions: totalTx
+    };
+}
+
+// fungsi untuk ambil data grafik pendapatan (default 7 hari terakhir)
+export async function getRevenueChartData(params = {}) {
+    const { startDate, endDate } = params;
+    const chartData = [];
+
+    // tentukan range tanggal grafik
+    let start = startDate ? new Date(startDate) : new Date();
+    let end = endDate ? new Date(endDate) : new Date();
+
+    // kalau ga ada filter, default ambil 7 hari ke belakang dari hari ini
+    if (!startDate) {
+        start.setDate(start.getDate() - 6);
+    }
+
+    // reset jam start ke awal hari & end ke akhir hari
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+
+    // loop setiap hari dari start sumpai end date
+    let current = new Date(start);
+    while (current <= end) {
+        const d = new Date(current);
+        const nextDay = new Date(d);
+        nextDay.setDate(d.getDate() + 1); // hari esok
+
+        // query total pendapatan user specific tanggal 'd'
+        const revenue = await prisma.tb_transaksi.aggregate({
+            _sum: { biaya_total: true },
+            where: {
+                waktu_keluar: {
+                    gte: d, // mulai dari jam 00:00 hari ini
+                    lt: nextDay // sampai sebelum jam 00:00 besok
+                },
+                status: 'keluar'
+            }
+        });
+
+        // format tanggal jadi "30 Jan" (sesuai request)
+        // push data ke array chartData
+        chartData.push({
+            date: d.toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }),
+            revenue: parseInt(revenue._sum.biaya_total || 0)
+        });
+
+        // geser ke hari berikutnya
+        current.setDate(current.getDate() + 1);
+    }
+
+    return chartData;
+}
+
+====================
+
+src/features/reports/actions/index.js :
+export { getDashboardData } from './get-dashboard-data.action.js';
+export { getOwnerStats, getRevenueChartData } from './get-owner-reports.action.js';
+
+====================
+
+src/features/reports/components/owner-filter/index.js :
+"use client";
+
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import styles from "./styles.module.css";
+
+export default function OwnerFilter() {
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const { replace } = useRouter();
+
+    const startDate = searchParams.get("startDate") || "";
+    const endDate = searchParams.get("endDate") || "";
+
+    const handleFilterChange = (key, value) => {
+        const params = new URLSearchParams(searchParams);
+        if (value) {
+            params.set(key, value);
+        } else {
+            params.delete(key);
+        }
+        replace(`${pathname}?${params.toString()}`);
+    };
+
+    const handleReset = () => {
+        replace(pathname);
+    };
+
+    return (
+        <div className={styles.cardContainer}>
+            <div className={styles.filterRow}>
+                {/* Start Date */}
+                <div className={styles.filterGroup}>
+                    <label className={styles.label}>Dari Tanggal</label>
+                    <input
+                        type="date"
+                        className={styles.input}
+                        value={startDate}
+                        onChange={(e) => handleFilterChange("startDate", e.target.value)}
+                    />
+                </div>
+
+                {/* End Date */}
+                <div className={styles.filterGroup}>
+                    <label className={styles.label}>Sampai Tanggal</label>
+                    <input
+                        type="date"
+                        className={styles.input}
+                        value={endDate}
+                        onChange={(e) => handleFilterChange("endDate", e.target.value)}
+                    />
+                </div>
+
+                {/* Reset Button */}
+                {(startDate || endDate) && (
+                    <button className={styles.btnReset} onClick={handleReset}>
+                        Reset Filter
+                    </button>
+                )}
+            </div>
+        </div>
+    );
+}
+
+====================
+
+src/features/reports/components/owner-filter/styles.module.css :
+.cardContainer {
+    background: white;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+    margin-bottom: 30px;
+}
+
+.filterRow {
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+}
+
+.filterGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #4B5563;
+}
+
+.input {
+    padding: 10px 14px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1F2937;
+    background-color: white;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.input:focus {
+    border-color: #204DD2;
+}
+
+.btnReset {
+    padding: 10px 16px;
+    background: #F3F4F6;
+    border: none;
+    border-radius: 8px;
+    color: #4B5563;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btnReset:hover {
+    background: #E5E7EB;
+}
+====================
+
+src/features/reports/components/revenue-chart/index.js :
+"use client";
+// import komponen dari library recharts untuk membuat grafik
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+// komponen grafik pendapatan
+// menerima props data: array object { date, revenue }
+export default function RevenueChart({ data }) {
+    // cek kalau datanya kosong, tampilin pesan
+    if (!data || data.length === 0) {
+        return <div style={{ textAlign: 'center', padding: '20px', color: '#999' }}>Belum ada data grafik.</div>;
+    }
+
+    return (
+        // container pembungkus dengan tinggi tetap 300px
+        <div style={{ width: '100%', height: 300 }}>
+            {/* responsivecontainer bikin grafik menyesuaikan lebar layar otomatis */}
+            <ResponsiveContainer>
+                {/* barchart = jenis grafik batang */}
+                <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    {/* cartesiangrid = garis bantu latar belakang (garis putus-putus) */}
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+
+                    {/* xaxis = sumbu horizontal (tanggal) */}
+                    <XAxis
+                        dataKey="date" // ambil data dari property 'date'
+                        axisLine={false} // hilangin garis sumbu
+                        tickLine={false} // hilangin garis strip kecil
+                        tick={{ fontSize: 12, fill: '#6B7280' }} // styling teks
+                        dy={10} // geser ke bawah dikit
+                    />
+
+                    {/* yaxis = sumbu vertikal (jumlah uang) */}
+                    <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fill: '#6B7280' }}
+                        // format angka jadi 'Rp 500k' biar ringkas
+                        tickFormatter={(value) => `Rp ${(value / 1000)}k`}
+                    />
+
+                    {/* tooltip = info yang muncul pas kursor diarahkan ke batang */}
+                    <Tooltip
+                        cursor={{ fill: '#F3F4F6' }} // warna highlight background
+                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
+                        // format angka di dalam tooltip (ribuan pake koma)
+                        formatter={(value) => [`Rp ${value.toLocaleString()}`, 'Pendapatan']}
+                    />
+
+                    {/* bar = batang grafiknya */}
+                    <Bar
+                        dataKey="revenue" // ambil nilai dari property 'revenue'
+                        fill="#204DD2" // warna biru
+                        radius={[4, 4, 0, 0]} // lengkungan sudut atas
+                        barSize={40} // lebar batang
+                    />
+                </BarChart>
+            </ResponsiveContainer>
+        </div>
+    );
+}
+
+====================
+
+src/features/tariffs/actions/index.js :
+export { getTarif, saveTarif, createTarif, deleteTarif } from './manage-tariffs.actions.js';
+
+====================
+
+src/features/tariffs/actions/manage-tariffs.actions.js :
+"use server";
+
+// import prisma client untuk akses database
+import prisma from "@/lib/database/prisma";
+// import revalidatePath untuk refresh data di halaman tertentu setelah ada perubahan
+import { revalidatePath } from "next/cache";
+
+// fungsi untuk mengambil semua data tarif dari database
+// ini dipake buat nampilin daftar tarif di tabel admin
+export async function getTarif() {
+    // cari semua data di tabel tb_tarif dan kembalikan hasilnya
+    return await prisma.tb_tarif.findMany();
+}
+
+// fungsi untuk menyimpan data tarif (bisa insert baru atau update yang ada)
+// menerima input berupa formdata dari form frontend
+export async function saveTarif(formData) {
+    // ambil nilai id, jenis kendaraan, dan harga dari form
+    const id = formData.get("id_tarif");
+    const jenis = formData.get("jenis_kendaraan");
+    const harga = formData.get("tarif_per_jam");
+
+    // cek apakah ada id tarif?
+    if (id) {
+        // kalau ada id, berarti ini proses update data lama
+        await prisma.tb_tarif.update({
+            where: { id_tarif: parseInt(id) }, // cari data berdasarkan id
+            data: { jenis_kendaraan: jenis, tarif_per_jam: parseFloat(harga) }, // update datanya
+        });
+    } else {
+        // kalau tidak ada id, berarti ini buat data baru
+        await prisma.tb_tarif.create({
+            data: { jenis_kendaraan: jenis, tarif_per_jam: parseFloat(harga) }, // simpan data baru
+        });
+    }
+    // refresh halaman tarif admin biar data terbaru langsung muncul
+    revalidatePath("/dashboard/admin/tarif");
+}
+
+// fungsi khusus untuk buat tarif baru (alternatif lain dari saveTarif)
+export async function createTarif(formData) {
+    // ambil data inputan
+    const jenis = formData.get("jenis");
+    const tarif = parseInt(formData.get("tarif"));
+
+    // simpan ke database
+    await prisma.tb_tarif.create({
+        data: { jenis_kendaraan: jenis, tarif_per_jam: tarif }
+    });
+
+    // refresh halaman
+    revalidatePath("/dashboard/admin/tarif");
+}
+
+// fungsi untuk menghapus data tarif
+export async function deleteTarif(formData) {
+    // ambil id tarif yang mau dihapus dari form
+    const id = parseInt(formData.get("id_tarif"));
+
+    // hapus data dari database berdasarkan id
+    await prisma.tb_tarif.delete({ where: { id_tarif: id } });
+
+    // refresh halaman biar data yang dihapus hilang dari tampilan
+    revalidatePath("/dashboard/admin/tarif");
+}
+
+====================
+
+src/features/transactions/actions/check-in.action.js :
+"use server";
+
+import prisma from "@/lib/database/prisma";
+import { revalidatePath } from "next/cache";
+import { writeLog } from "@/features/logs/actions/log.action";
+
+export async function checkInKendaraan(formData) {
+    const plat = formData.get("plat_nomor").toUpperCase();
+    const idTarif = parseInt(formData.get("id_tarif"));
+    const idArea = parseInt(formData.get("id_area"));
+    const idUser = parseInt(formData.get("id_user"));
+
+    if (!plat || !idTarif || !idArea) {
+        return { success: false, error: "Data tidak lengkap! Mohon isi semua field." };
+    }
+
+    try {
+        await prisma.tb_transaksi.create({
+            data: {
+                plat_nomor: plat,
+                id_tarif: idTarif,
+                id_area: idArea,
+                id_user: idUser,
+                status: "masuk",
+                waktu_masuk: new Date(),
+            },
+        });
+
+        await prisma.tb_area_parkir.update({
+            where: { id_area: idArea },
+            data: { terisi: { increment: 1 } },
+        });
+
+        // catat log aktivitas
+        await writeLog(idUser, `Check-In Kendaraan: ${plat}`);
+
+        revalidatePath("/dashboard/petugas");
+
+        return { success: true };
+
+    } catch (error) {
+        console.error("Kesalahan sistem saat Check-In:", error);
+        return { success: false, error: "Gagal memproses check-in. Coba lagi." };
+    }
+}
+
+====================
+
+src/features/transactions/actions/check-out.action.js :
+"use server";
+
+import prisma from "@/lib/database/prisma";
+import { revalidatePath } from "next/cache";
+import { writeLog } from "@/features/logs/actions/log.action";
+import { cookies } from "next/headers";
+
+export async function checkoutKendaraan(id_parkir, total_bayar, id_area) {
+    try {
+        const res = await prisma.tb_transaksi.update({
+            where: { id_parkir: parseInt(id_parkir) },
+            data: {
+                waktu_keluar: new Date(),
+                biaya_total: total_bayar,
+                status: 'keluar'
+            },
+            // include plat nomor buat log
+            select: { plat_nomor: true }
+        });
+
+        await prisma.tb_area_parkir.update({
+            where: { id_area: parseInt(id_area) },
+            data: {
+                terisi: { decrement: 1 }
+            }
+        });
+
+        // ambil id user dari session cookie buat log
+        const cookieStore = await cookies();
+        const userId = cookieStore.get("session_user_id")?.value;
+
+        if (userId) {
+            await writeLog(userId, `Check-Out Kendaraan: ${res.plat_nomor}`);
+        }
+
+        revalidatePath("/dashboard/petugas/keluar");
+        return { success: true };
+
+    } catch (error) {
+        console.error("Kesalahan sistem saat Checkout:", error);
+        return { success: false, error: "Gagal memproses checkout." };
+    }
+}
+
+====================
+
+src/features/transactions/actions/get-parked-vehicles.action.js :
+"use server";
+
+import prisma from "@/lib/database/prisma";
+
+export async function getParkedVehicles() {
+    try {
+        const data = await prisma.tb_transaksi.findMany({
+            where: { status: 'masuk' },
+            include: {
+                tb_tarif: true,
+                tb_area_parkir: true
+            },
+            orderBy: { waktu_masuk: 'desc' }
+        });
+
+        const safeData = data.map(item => ({
+            ...item,
+            tb_tarif: {
+                ...item.tb_tarif,
+                tarif_per_jam: Number(item.tb_tarif.tarif_per_jam)
+            }
+        }));
+
+        return { success: true, data: safeData };
+    } catch (error) {
+        console.error("Gagal mengambil daftar kendaraan parkir:", error);
+        return { success: false, error: "Gagal mengambil data dari server." };
+    }
+}
+
+====================
+
+src/features/transactions/actions/index.js :
+export { checkInKendaraan } from './check-in.action.js';
+export { checkoutKendaraan } from './check-out.action.js';
+export { searchKendaraanMasuk } from './search-vehicle.action.js';
+export { getParkedVehicles } from './get-parked-vehicles.action.js';
+
+====================
+
+src/features/transactions/actions/search-vehicle.action.js :
+"use server";
+
+import prisma from "@/lib/database/prisma";
+
+export async function searchKendaraanMasuk(plat) {
+    try {
+        const data = await prisma.tb_transaksi.findFirst({
+            where: {
+                plat_nomor: {
+                    contains: plat.toUpperCase()
+                },
+                status: 'masuk'
+            },
+            include: {
+                tb_tarif: true,
+                tb_area_parkir: true
+            }
+        });
+
+        if (!data) {
+            return { success: false, error: "Kendaraan tidak ditemukan atau sudah keluar." };
+        }
+
+        const safeData = {
+            ...data,
+            tb_tarif: {
+                ...data.tb_tarif,
+                tarif_per_jam: parseInt(data.tb_tarif.tarif_per_jam)
+            }
+        };
+
+        return { success: true, data: safeData };
+
+    } catch (error) {
+        console.error("Kesalahan sistem saat mencari kendaraan:", error);
+        return { success: false, error: "Terjadi kesalahan server." };
+    }
+}
+
+====================
+
+src/features/transactions/components/checkout/index.js :
+"use client";
+import { useState, useRef } from "react";
+// import server action untuk cari data kendaraan dan proses checkout
+import { searchKendaraanMasuk, checkoutKendaraan } from "@/features/transactions/actions";
+// import styles dari module css
+import styles from "@/app/dashboard/petugas/styles.module.css";
+// import library untuk fitur print struk
+import { useReactToPrint } from "react-to-print";
+
+// komponen utama sistem checkout (keluar parkir)
+// menerima props initialparkedvehicles: data awal kendaraan yg sedang parkir
+export default function CheckoutSystem({ initialParkedVehicles = [] }) {
+    // state untuk input pencarian plat nomor
+    const [search, setSearch] = useState("");
+    // state untuk menyimpan data kendaraan yang ditemukan
+    const [data, setData] = useState(null);
+    // state untuk indikator loading saat proses data
+    const [loading, setLoading] = useState(false);
+    // state untuk menandai apakah transaksi checkout sudah berhasil atau belum
+    const [checkoutDone, setCheckoutDone] = useState(false);
+    // state untuk menyimpan pesan error jika ada
+    const [errorMsg, setErrorMsg] = useState("");
+
+    // state untuk menyimpan daftar kendaraan yang sedang parkir
+    // (biar bisa update realtime tanpa refresh halaman)
+    const [parkedVehicles, setParkedVehicles] = useState(initialParkedVehicles);
+    // state untuk filter pencarian di list sebelah kanan
+    const [listSearch, setListSearch] = useState("");
+
+    // ref untuk elemen struk yang akan diprint
+    const componentRef = useRef();
+
+    // logika untuk menyaring daftar kendaraan berdasarkan input pencarian list
+    const filteredVehicles = parkedVehicles.filter(v =>
+        v.plat_nomor.toLowerCase().includes(listSearch.toLowerCase())
+    );
+
+    // 1. cari kendaraan (bisa dari input manual atau klik list)
+    async function handleSearch(manualPlat) {
+        // tentukan plat nomor mana yang mau dicari (dari parameter atau state search)
+        const platToSearch = typeof manualPlat === 'string' ? manualPlat : search;
+
+        // kalau kosong, ga usah jalanin apa-apa
+        if (!platToSearch) return;
+
+        // mulai loading, reset error dan data sebelumnya
+        setLoading(true);
+        setErrorMsg("");
+        setData(null);
+        setCheckoutDone(false);
+
+        // panggil server action untuk cari data di database
+        const result = await searchKendaraanMasuk(platToSearch);
+
+        if (result.success) {
+            // kalau ketemu, simpan datanya ke state
+            setData(result.data);
+            setSearch(platToSearch); // update tampilan input field
+        } else {
+            // kalau ga ketemu, tampilkan pesan error
+            setErrorMsg(result.error);
+        }
+        // selesai loading
+        setLoading(false);
+    }
+
+    // 2. hitung biaya parkir
+    const calculateCost = () => {
+        // kalau ga ada data kendaraan, stop
+        if (!data) return null;
+
+        // hitung selisih waktu masuk dan waktu sekarang (keluar)
+        const masuk = new Date(data.waktu_masuk);
+        const keluar = new Date();
+        const diffMs = keluar - masuk; // selisih dalam milidetik
+        const diffMinutes = Math.floor(diffMs / (1000 * 60)); // konversi ke menit
+        const diffHours = Math.ceil(diffMs / (1000 * 60 * 60)); // konversi ke jam (pembulatan ke atas)
+
+        // minimal bayar 1 jam, meskipun baru 10 menit
+        const jamBayar = diffHours < 1 ? 1 : diffHours;
+
+        // hitung total bayar: durasi jam x tarif per jam
+        const total = jamBayar * data.tb_tarif.tarif_per_jam;
+
+        // format durasi untuk ditampilkan (jam & menit)
+        const d_h = Math.floor(diffMinutes / 60);
+        const d_m = diffMinutes % 60;
+        const durasiText = `${d_h} Jam ${d_m} Menit`;
+
+        // kembalikan hasil perhitungan
+        return {
+            keluarTime: keluar,
+            durasiJam: jamBayar,
+            durasiText: durasiText,
+            totalBayar: total
+        };
+    };
+
+    // 3. proses checkout (simpan transaksi)
+    async function handleCheckout() {
+        // kalkulasi dulu biayanya
+        const info = calculateCost();
+        if (!info) return;
+
+        setLoading(true);
+
+        // panggil server action untuk simpan data checkout ke database
+        const res = await checkoutKendaraan(data.id_parkir, info.totalBayar, data.id_area);
+
+        if (res.success) {
+            // kalau sukses
+            setCheckoutDone(true); // tandai selesai
+
+            // update data lokal biar tampilan berubah (ada status keluar & struk muncul)
+            setData(prev => ({
+                ...prev,
+                waktu_keluar: info.keluarTime,
+                biaya_total: info.totalBayar,
+                status: 'keluar'
+            }));
+
+            // hapus kendaraan dari daftar parkir di sebelah kanan (karena udah keluar)
+            setParkedVehicles(prev => prev.filter(v => v.id_parkir !== data.id_parkir));
+        } else {
+            // kalau gagal, munculin alert
+            alert("Gagal Checkout: " + res.error);
+        }
+        setLoading(false);
+    }
+
+    // 4. print receipt (cetak struk)
+    // menggunakan hook useReactToPrint
+    // const handlePrint = useReactToPrint({
+    //     content: () => componentRef.current, // elemen mana yang mau diprint
+    //     documentTitle: `STRUK-${data?.plat_nomor}`, // nama file kalau disave pdf
+    // });
+
+    // fungsi reset form untuk transaksi baru
+    const resetForm = () => {
+        setSearch("");
+        setData(null);
+        setCheckoutDone(false);
+        setErrorMsg("");
+        setShowReceipt(false); // reset juga status struk
+    };
+
+    // hitung info biaya kalau data tersedia
+    const info = data ? calculateCost() : null;
+
+    return (
+        <div className={styles.checkoutGrid}>
+
+            {/* sisi kiri: form & detail */}
+            <div className={styles.leftSide}>
+
+                {/* tampilkan form pencarian kalau belum ada data yang dipilih */}
+                {!data && (
+                    <div className={styles.card} style={{ textAlign: 'center' }}>
+                        <h3 className={styles.cardTitle}>Pencarian Kendaraan</h3>
+                        <form onSubmit={(e) => { e.preventDefault(); handleSearch(); }}>
+                            <input
+                                type="text"
+                                className={styles.inputPlat}
+                                placeholder="D 1234 ABC"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value.toUpperCase())}
+                                maxLength={12}
+                                required
+                            />
+                            {errorMsg && (
+                                <div style={{ marginTop: '15px', color: '#EF4444', fontWeight: '600' }}>
+                                    {errorMsg}
+                                </div>
+                            )}
+                            <button type="submit" className={styles.btnSubmit} disabled={loading}>
+                                {loading ? "Mencari..." : "Cari Data Parkir"}
+                            </button>
+                        </form>
+                    </div>
+                )}
+
+                {/* tampilkan detail kendaraan & pembayaran kalau data sudah ada */}
+                {data && info && (
+                    <div className={styles.card}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800' }}>
+                                Detail: <span style={{ color: '#204DD2' }}>{data.plat_nomor}</span>
+                            </h3>
+                            {/* tombol cari ulang (batal) kalau belum checkout */}
+                            {!checkoutDone && (
+                                <button onClick={() => setData(null)} style={{ background: 'none', border: 'none', color: '#6B7280', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                                    Cari Ulang
+                                </button>
+                            )}
+                        </div>
+
+                        {/* grid informasi detail parkir */}
+                        <div className={styles.infoGrid}>
+                            <div className={styles.infoBox}>
+                                <p className={styles.infoLabel}>Waktu Masuk</p>
+                                <p className={styles.infoValue}>{new Date(data.waktu_masuk).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                            <div className={styles.infoBox}>
+                                <p className={styles.infoLabel}>Jenis Kendaraan</p>
+                                <p className={styles.infoValue}>{data.tb_tarif.jenis_kendaraan}</p>
+                            </div>
+                            <div className={styles.infoBox}>
+                                <p className={styles.infoLabel}>Durasi Parkir</p>
+                                <p className={styles.infoValue}>{info.durasiText}</p>
+                            </div>
+                            <div className={styles.infoBox}>
+                                <p className={styles.infoLabel}>Tarif Per Jam</p>
+                                <p className={styles.infoValue}>Rp {data.tb_tarif.tarif_per_jam.toLocaleString()}</p>
+                            </div>
+                        </div>
+
+                        {/* banner harga total */}
+                        <div className={`${styles.priceBanner} ${checkoutDone ? styles.priceBannerSuccess : styles.priceBannerPending}`}>
+                            <p className={styles.priceTitle} style={{ color: checkoutDone ? '#059669' : '#204DD2' }}>
+                                {checkoutDone ? "TRANSAKSI BERHASIL" : "TOTAL PEMBAYARAN"}
+                            </p>
+                            <h2 className={styles.priceValue} style={{ color: checkoutDone ? '#059669' : '#111827' }}>
+                                Rp {parseInt(info.totalBayar).toLocaleString()}
+                            </h2>
+                            {!checkoutDone && <p className={styles.priceMeta}>Silakan terima pembayaran dari pelanggan</p>}
+                        </div>
+
+                        {/* hidden receipt (struk rahasia) - cuma dirender buat diprint, ga tampil di layar */}
+                        {/* Removed as per instruction, as useReactToPrint is no longer used */}
+                        {/* <div style={{ display: 'none' }}>
+                            <div ref={componentRef} style={{ padding: '40px', width: '380px', fontFamily: 'monospace' }}>
+                                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                                    <h2 style={{ margin: 0 }}>FLASHPARK</h2>
+                                    <p>Sistem Parkir Modern</p>
+                                    <p>--------------------------------</p>
+                                </div>
+                                <div style={{ marginBottom: '5px', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>ID PARKIR:</span> <span>#{data.id_parkir}</span>
+                                </div>
+                                <div style={{ marginBottom: '5px', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>PLAT NOMOR:</span> <span style={{ fontWeight: 'bold' }}>{data.plat_nomor}</span>
+                                </div>
+                                <div style={{ marginBottom: '5px', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>JENIS:</span> <span>{data.tb_tarif.jenis_kendaraan}</span>
+                                </div>
+                                <div style={{ marginBottom: '5px', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>MASUK:</span> <span>{new Date(data.waktu_masuk).toLocaleString()}</span>
+                                </div>
+                                <div style={{ marginBottom: '5px', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>KELUAR:</span> <span>{info.keluarTime.toLocaleString()}</span>
+                                </div>
+                                <div style={{ marginBottom: '5px', display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>DURASI:</span> <span>{info.durasiJam} Jam</span>
+                                </div>
+                                <div style={{ borderTop: '1px dashed #000', margin: '15px 0', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: 'bold' }}>
+                                    <span>TOTAL:</span> <span>Rp {parseInt(info.totalBayar).toLocaleString()}</span>
+                                </div>
+                                <div style={{ textAlign: 'center', marginTop: '30px' }}>
+                                    <p>Terima Kasih</p>
+                                    <p>Semoga Selamat Sampai Tujuan</p>
+                                </div>
+                            </div>
+                        </div> */}
+
+                        {/* tombol aksi */}
+                        {!checkoutDone ? (
+                            // kalau belum checkout, tombolnya "konfirmasi pembayaran"
+                            <button onClick={handleCheckout} className={styles.btnSubmit} disabled={loading} style={{ marginTop: '0px' }}>
+                                {loading ? "Memproses..." : "Konfirmasi Pembayaran"}
+                            </button>
+                        ) : (
+                            // kalau sudah checkout, tombolnya "cetak struk" dan "transaksi baru"
+                            <div className={styles.actionGroup}>
+                                <button onClick={() => setShowReceipt(true)} className={`${styles.btnSubmit} ${styles.btnSuccess}`} style={{ flex: 1, marginTop: 0 }}>
+                                    Cetak Struk
+                                </button>
+                                <button onClick={resetForm} className={`${styles.btnSubmit} ${styles.btnSecondary}`} style={{ flex: 1, marginTop: 0 }}>
+                                    Transaksi Baru
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* sisi kanan: daftar kendaraan parkir */}
+            <div className={`${styles.card} ${styles.rightSide}`}>
+                <h3 className={styles.cardTitle} style={{ marginBottom: '15px' }}>Daftar Kendaraan Parkir</h3>
+
+                {/* input pencarian filter list */}
+                <div className={styles.listSearchWrapper}>
+                    <input
+                        type="text"
+                        placeholder="Cari Plat Nomor..."
+                        className={styles.listSearchInput}
+                        value={listSearch}
+                        onChange={(e) => setListSearch(e.target.value.toUpperCase())}
+                    />
+                </div>
+
+                {/* daftar list kendaraan */}
+                <div className={styles.parkedList}>
+                    {filteredVehicles.length > 0 ? (
+                        filteredVehicles.map((v) => (
+                            <div
+                                key={v.id_parkir}
+                                onClick={() => handleSearch(v.plat_nomor)}
+                                className={`${styles.parkedItem} ${data?.id_parkir === v.id_parkir ? styles.parkedItemActive : ''}`}
+                            >
+                                <div className={styles.itemInfo}>
+                                    <p className={styles.itemPlat}>{v.plat_nomor}</p>
+                                    <p className={styles.itemMeta}>
+                                        {v.tb_tarif.jenis_kendaraan} • {new Date(v.waktu_masuk).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                </div>
+                                <div style={{ color: '#204DD2' }}>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M5 12h14M12 5l7 7-7 7" />
+                                    </svg>
+                                </div>
+                            </div>
+                        ))
+                    ) : (
+                        // tampilan kalau list kosong
+                        <div style={{ textAlign: 'center', color: '#9CA3AF', marginTop: '50px' }}>
+                            <p>Tidak ada kendaraan ditemukan</p>
+                        </div>
+                    )}
+                </div>
+
+                {/* footer total kendaraan */}
+                <div style={{ marginTop: 'auto', fontSize: '13px', color: '#6B7280', textAlign: 'center', borderTop: '1px solid #F3F4F6', paddingTop: '15px' }}>
+                    Total: <strong style={{ color: '#111827' }}>{parkedVehicles.length}</strong> Kendaraan
+                </div>
+            </div>
+
+            {/* ===== POP-UP STRUK ONLINE ===== */}
+            {showReceipt && data && info && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent}>
+                        <div className={styles.modalHeader}>
+                            <h2>Struk Parkir Online</h2>
+                            <p>FlashPark - Parkir Modern & Aman</p>
+                        </div>
+
+                        <div className={styles.receiptPaper}>
+                            <div className={styles.receiptItem}>
+                                <span className={styles.receiptLabel}>Plat Nomor</span>
+                                <span className={styles.receiptValue}>{data.plat_nomor}</span>
+                            </div>
+                            <div className={styles.receiptItem}>
+                                <span className={styles.receiptLabel}>Jenis</span>
+                                <span className={styles.receiptValue}>{data.tb_tarif.jenis_kendaraan}</span>
+                            </div>
+                            <div className={styles.receiptDivider} />
+                            <div className={styles.receiptItem}>
+                                <span className={styles.receiptLabel}>Waktu Masuk</span>
+                                <span className={styles.receiptValue}>{new Date(data.waktu_masuk).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <div className={styles.receiptItem}>
+                                <span className={styles.receiptLabel}>Waktu Keluar</span>
+                                <span className={styles.receiptValue}>{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <div className={styles.receiptItem}>
+                                <span className={styles.receiptLabel}>Durasi</span>
+                                <span className={styles.receiptValue}>{info.durasiText}</span>
+                            </div>
+                            <div className={styles.receiptDivider} />
+                            <div className={styles.receiptTotal}>
+                                <span>TOTAL BAYAR</span>
+                                <span>Rp {parseInt(info.totalBayar).toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        <div className={styles.modalFooter}>
+                            <button className={styles.btnOk} onClick={() => setShowReceipt(false)}>
+                                OK
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+        </div>
+    );
+}
+
+====================
+
+src/features/transactions/components/dashboard-filter/index.js :
+"use client";
+
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useDebouncedCallback } from "@/hooks/use-debounce";
+import styles from "@/app/dashboard/admin/admin.module.css";
+
+export function DashboardFilter() {
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+    const { replace } = useRouter();
+
+    const handleSearch = useDebouncedCallback((term) => {
+        const params = new URLSearchParams(searchParams);
+        if (term) {
+            params.set("query", term);
+        } else {
+            params.delete("query");
+        }
+        replace(`${pathname}?${params.toString()}`);
+    }, 300);
+
+    const handleDateChange = (date) => {
+        const params = new URLSearchParams(searchParams);
+        if (date) {
+            params.set("date", date);
+        } else {
+            params.delete("date");
+        }
+        replace(`${pathname}?${params.toString()}`);
+    };
+
+    const handleVehicleChange = (vehicle) => {
+        const params = new URLSearchParams(searchParams);
+        if (vehicle && vehicle !== "Semua") {
+            params.set("vehicle", vehicle);
+        } else {
+            params.delete("vehicle");
+        }
+        replace(`${pathname}?${params.toString()}`);
+    };
+
+    return (
+        <div className={styles.cardContainer} style={{ marginBottom: '20px', padding: '20px' }}>
+            <div className={styles.filterRow}>
+                {/* Filter Tanggal */}
+                <div className={styles.filterGroup}>
+                    <label className={styles.label}>Tanggal</label>
+                    <input
+                        type="date"
+                        className={styles.input}
+                        defaultValue={searchParams.get("date")?.toString()}
+                        onChange={(e) => handleDateChange(e.target.value)}
+                    />
+                </div>
+
+                {/* Filter Plat Nomor */}
+                <div className={styles.filterGroup} style={{ flex: 2 }}>
+                    <label className={styles.label}>Plat Nomor</label>
+                    <div className={styles.searchContainer}>
+                        <input
+                            type="text"
+                            className={styles.input}
+                            placeholder="Cari Plat Nomor..."
+                            style={{ width: '100%' }}
+                            defaultValue={searchParams.get("query")?.toString()}
+                            onChange={(e) => handleSearch(e.target.value)}
+                        />
+                        <span className={styles.searchIcon}>🔍</span>
+                    </div>
+                </div>
+
+                {/* Filter Kendaraan */}
+                <div className={styles.filterGroup}>
+                    <label className={styles.label}>Kendaraan</label>
+                    <select
+                        className={styles.input}
+                        style={{ background: 'white' }}
+                        defaultValue={searchParams.get("vehicle")?.toString()}
+                        onChange={(e) => handleVehicleChange(e.target.value)}
+                    >
+                        <option value="Semua">Semua</option>
+                        <option value="Mobil">Mobil</option>
+                        <option value="Motor">Motor</option>
+                        <option value="Truk">Truk</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+====================
+
+src/features/users/actions/index.js :
+export { getUsers, createUser, deleteUser, getUserById, updateUser } from './manage-users.actions.js';
+
+====================
+
+src/features/users/actions/manage-users.actions.js :
+"use server";
+
+import prisma from "@/lib/database/prisma";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+
+export async function getUsers() {
+    return await prisma.tb_user.findMany({
+        orderBy: { id_user: "asc" },
+    });
+}
+
+export async function createUser(prevState, formData) {
+    const nama = formData.get("nama");
+    const username = formData.get("username");
+    const password = formData.get("password");
+    const role = formData.get("role");
+
+    try {
+        await prisma.tb_user.create({
+            data: {
+                nama_lengkap: nama,
+                username: username,
+                password: password,
+                role: role,
+                status_aktif: 1,
+            },
+        });
+    } catch (err) {
+        return { error: "Gagal membuat user. Username mungkin sudah ada." };
+    }
+
+    revalidatePath("/dashboard/admin/users");
+    redirect("/dashboard/admin/users");
+}
+
+export async function deleteUser(formData) {
+    const id = formData.get("id");
+    if (!id) return;
+
+    try {
+        await prisma.tb_user.delete({
+            where: { id_user: parseInt(id) },
+        });
+    } catch (error) {
+        console.error("Gagal hapus user:", error);
+    }
+
+    revalidatePath("/dashboard/admin/users");
+}
+
+export async function getUserById(id) {
+    return await prisma.tb_user.findUnique({
+        where: { id_user: parseInt(id) }
+    });
+}
+
+export async function updateUser(prevState, formData) {
+    const id = formData.get("id");
+    const nama = formData.get("nama");
+    const username = formData.get("username");
+    const role = formData.get("role");
+    const password = formData.get("password");
+
+    try {
+        const dataToUpdate = {
+            nama_lengkap: nama,
+            username: username,
+            role: role,
+        };
+
+        if (password && password.trim() !== "") {
+            dataToUpdate.password = password;
+        }
+
+        await prisma.tb_user.update({
+            where: { id_user: parseInt(id) },
+            data: dataToUpdate,
+        });
+
+    } catch (err) {
+        return { error: "Gagal update. Username mungkin bentrok." };
+    }
+
+    revalidatePath("/dashboard/admin/users");
+    return { success: true };
+}
+
+====================
+
+src/features/users/components/edit-form/index.js :
+"use client";
+import { useActionState } from "react";
+import { updateUser } from "@/features/users/actions";
+import { Button } from "@/components/ui/buttons/button";
+import { Input } from "@/components/ui/inputs/input";
+import { redirect } from "next/navigation";
+
+export function EditForm({ user }) {
+  const [state, formAction] = useActionState(updateUser, null);
+
+  // Redirect balik kalau sukses
+  if (state?.success) {
+    redirect("/dashboard/admin/users");
+  }
+
+  return (
+    <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
+      {state?.error && <p style={{ color: "red" }}>{state.error}</p>}
+
+      {/* ID Tersembunyi (Wajib ada buat tau siapa yg diedit) */}
+      <input type="hidden" name="id" value={user.id_user} />
+
+      {/* Input Nama (Default Value dari Database) */}
+      <Input
+        label="Nama Lengkap"
+        name="nama"
+        defaultValue={user.nama_lengkap}
+        required
+      />
+
+      <Input
+        label="Username"
+        name="username"
+        defaultValue={user.username}
+        required
+      />
+
+      {/* Password (Opsional) */}
+      <div className="w-full">
+        <label className="block text-sm font-bold text-[#1A1A1A] mb-2 ml-1">
+          Password Baru (Kosongkan jika tidak diubah)
+        </label>
+        <input
+          type="password"
+          name="password"
+          placeholder="***"
+          className="w-full h-12 px-4 bg-[#F1F1F1] rounded-xl border-none outline-none focus:ring-2 focus:ring-[#204DD2]"
+        />
+      </div>
+
+      {/* Role */}
+      <div className="w-full">
+        <label className="block text-sm font-bold text-[#1A1A1A] mb-2 ml-1">Role</label>
+        <select
+          name="role"
+          defaultValue={user.role}
+          style={{
+            width: "100%", height: "48px", padding: "0 16px",
+            background: "#F1F1F1", border: "none", borderRadius: "12px"
+          }}
+        >
+          <option value="petugas">Petugas</option>
+          <option value="admin">Admin</option>
+          <option value="owner">Owner</option>
+        </select>
+      </div>
+
+      <div style={{ marginTop: "10px" }}>
+        <Button type="submit">Update Data</Button>
+      </div>
+    </form>
+  );
+}
+====================
+
+src/hooks/index.js :
+export { useDebounce } from './use-debounce.js';
+
+====================
+
+src/hooks/use-debounce.js :
+import { useEffect, useState, useRef } from 'react';
+
+export function useDebounce(value, delay) {
+    const [debouncedValue, setDebouncedValue] = useState(value);
+
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedValue(value);
+        }, delay);
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [value, delay]);
+
+    return debouncedValue;
+}
+
+export function useDebouncedCallback(callback, delay) {
+    const timeoutRef = useRef(null);
+
+    return (...args) => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+
+        timeoutRef.current = setTimeout(() => {
+            callback(...args);
+        }, delay);
+    };
+}
+
+====================
+
+src/lib/database/index.js :
+export { default as prisma } from './prisma.js';
+
+====================
+
+src/lib/database/prisma.js :
+import { PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
+import { Pool } from 'pg'
+
+const prismaClientSingleton = () => {
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL })
+    const adapter = new PrismaPg(pool)
+    return new PrismaClient({ adapter })
+}
+
+const globalForPrisma = globalThis
+
+const prisma = globalForPrisma.prismaGlobal ?? prismaClientSingleton()
+
+export default prisma
+
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prismaGlobal = prisma
+====================
+
