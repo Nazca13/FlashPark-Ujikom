@@ -17,7 +17,7 @@ export default async function EditPage({ params }) {
   return (
     <DashboardLayout activePage="Data User">
       <div style={{ maxWidth: "600px", background: "white", padding: "30px", borderRadius: "16px" }}>
-        <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "20px" }}>
+        <h2 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "20px", color: "#1A1A1A" }}>
           Edit Pengguna
         </h2>
         {/* Kita lempar data user ke komponen form */}

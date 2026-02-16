@@ -25,7 +25,25 @@
     border-bottom: 1px solid #F3F4F6;
 }
 
+/* Heading untuk halaman */
+.heading {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1A1A1A;
+}
+
 /* Input Plat Nomor (Dibuat Besar & Gagah) */
+.platLabel {
+    display: block;
+    text-align: center;
+    font-weight: 800;
+    margin-bottom: 12px;
+    color: #000000 !important;
+    font-size: 16px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+}
+
 .inputPlat {
     width: 100%;
     height: 70px;
@@ -88,8 +106,18 @@
 }
 
 .vehicleIcon {
-    font-size: 24px;
     margin-bottom: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.vehicleImg {
+    transition: transform 0.2s ease;
+}
+
+.vehicleRadio:checked+.vehicleCard .vehicleImg {
+    transform: scale(1.1);
 }
 
 .vehicleLabel {
@@ -129,6 +157,7 @@
     font-size: 16px;
     margin-top: 20px;
     background: white;
+    color: #1F2937;
     cursor: pointer;
 }
 
@@ -422,8 +451,15 @@
 }
 
 @keyframes modalShift {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .modalHeader {

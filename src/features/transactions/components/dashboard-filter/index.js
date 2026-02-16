@@ -74,7 +74,7 @@ export function DashboardFilter() {
                     <label className={styles.label}>Kendaraan</label>
                     <select
                         className={styles.input}
-                        style={{ background: 'white' }}
+                        style={{ background: 'white', color: '#1F2937' }}
                         defaultValue={searchParams.get("vehicle")?.toString()}
                         onChange={(e) => handleVehicleChange(e.target.value)}
                     >

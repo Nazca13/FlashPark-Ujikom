@@ -24,7 +24,7 @@ export default async function TarifPage() {
 
             {/* ===== FORM TAMBAH TARIF BARU ===== */}
             <div className={styles.cardContainer} style={{ marginBottom: '30px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px' }}>+ Set Tarif Baru</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px', color: '#1A1A1A' }}>+ Set Tarif Baru</h3>
 
                 {/* form langsung connect ke server action createTarif */}
                 <form action={createTarif} className={styles.filterRow} style={{ alignItems: 'flex-end' }}>

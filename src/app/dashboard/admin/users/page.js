@@ -3,9 +3,10 @@ import styles from "../admin.module.css";
 
 import prisma from "@/lib/database/prisma";
 
-import { createUser, deleteUser } from "@/features/users/actions";
+import { deleteUser } from "@/features/users/actions";
 
 import { DashboardLayout } from "@/components/layouts/admin-layout";
+import { AddUserForm } from "./add-user-form";
 
 // ini server component (jalan di server)
 // makanya bisa langsung pake async/await
@@ -22,42 +23,8 @@ export default async function UsersPage() {
 
       {/* ===== BAGIAN FORM TAMBAH USER BARU ===== */}
       <div className={styles.cardContainer} style={{ marginBottom: '30px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px' }}>+ Tambah User Baru</h3>
-
-        {/* form ini langsung connect ke server action createUser */}
-        <form action={createUser} className={styles.filterRow} style={{ alignItems: 'flex-end' }}>
-
-          {/* input nama lengkap */}
-          <div className={styles.filterGroup} style={{ flex: 2 }}>
-            <label className={styles.label}>Nama Lengkap</label>
-            <input name="nama" className={styles.input} placeholder="Contoh: Budi Santoso" required />
-          </div>
-
-          {/* input username */}
-          <div className={styles.filterGroup} style={{ flex: 1 }}>
-            <label className={styles.label}>Username</label>
-            <input name="username" className={styles.input} placeholder="user123" required />
-          </div>
-
-          {/* input password */}
-          <div className={styles.filterGroup} style={{ flex: 1 }}>
-            <label className={styles.label}>Password</label>
-            <input name="password" type="password" className={styles.input} placeholder="******" required />
-          </div>
-
-          {/* dropdown pilih role */}
-          <div className={styles.filterGroup} style={{ flex: 1 }}>
-            <label className={styles.label}>Role</label>
-            <select name="role" className={styles.input} style={{ background: 'white' }}>
-              <option value="petugas">Petugas</option>
-              <option value="admin">Admin</option>
-              <option value="owner">Owner</option>
-            </select>
-          </div>
-
-          {/* tombol submit */}
-          <button type="submit" className={styles.btnPrimary}>Simpan</button>
-        </form>
+        <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '16px', color: '#1A1A1A' }}>+ Tambah User Baru</h3>
+        <AddUserForm />
       </div>
 
       {/* ===== BAGIAN TABEL DATA USER ===== */}
