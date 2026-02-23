@@ -76,7 +76,7 @@ export default function ExportButton({ stats, chartData }) {
                 gap: '8px'
             }}
         >
-            <span>📄 Download Laporan PDF</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><img src="/content/download-pdf.svg" alt="download" style={{ width: '18px', height: '18px' }} /> Download Laporan PDF</span>
         </button>
     );
 }

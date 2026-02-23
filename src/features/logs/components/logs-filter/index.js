@@ -52,7 +52,7 @@ export function LogsFilter() {
                             defaultValue={searchParams.get("query")?.toString()}
                             onChange={(e) => handleSearch(e.target.value)}
                         />
-                        <span className={styles.searchIcon}>🔍</span>
+                        <span className={styles.searchIcon}><img src="/content/search-icon.svg" alt="search" style={{ width: '18px', height: '18px' }} /></span>
                     </div>
                 </div>
             </div>
