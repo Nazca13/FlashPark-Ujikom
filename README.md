@@ -330,14 +330,6 @@ npm run electron-dev
 
 ---
 
-## 👥 Kontributor
-
-| Nama | Role |
-|---|---|
-| **Nazca** | Full-Stack Developer |
-
----
-
 ## 📄 Lisensi
 
 Proyek ini dibuat untuk keperluan **Uji Kompetensi Keahlian (UKK) RPL** dan bersifat **open-source** untuk tujuan edukasi.
