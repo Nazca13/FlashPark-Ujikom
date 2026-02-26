@@ -344,6 +344,3 @@ Proyek ini dibuat untuk keperluan **Uji Kompetensi Keahlian (UKK) RPL** dan bers
 
 ---
 
-<p align="center">
-  Dibuat dengan ❤️ menggunakan <strong>Next.js</strong>, <strong>React</strong>, dan <strong>PostgreSQL</strong>
-</p>
