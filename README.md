@@ -314,22 +314,6 @@ npm run electron-dev
 
 ---
 
-## 📸 Screenshot
-
-> *Tambahkan screenshot aplikasi di sini untuk memberikan preview visual.*
-
-| Halaman | Preview |
-|---|---|
-| Login | *screenshot* |
-| Dashboard Admin | *screenshot* |
-| Dashboard Petugas (Check-In) | *screenshot* |
-| Transaksi Keluar (Check-Out) | *screenshot* |
-| Dashboard Owner (Laporan) | *screenshot* |
-| Cetak Struk | *screenshot* |
-| Ekspor PDF | *screenshot* |
-
----
-
 ## 📄 Lisensi
 
 Proyek ini dibuat untuk keperluan **Uji Kompetensi Keahlian (UKK) RPL** dan bersifat **open-source** untuk tujuan edukasi.
