@@ -14,7 +14,6 @@
   <img src="https://img.shields.io/badge/React-19.2.3-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
   <img src="https://img.shields.io/badge/Prisma-5.10.2-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma" />
   <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
-  <img src="https://img.shields.io/badge/Electron-34.0.0-47848F?style=for-the-badge&logo=electron&logoColor=white" alt="Electron" />
 </p>
 
 ---
@@ -114,7 +113,6 @@
 | Teknologi | Versi | Fungsi |
 |---|---|---|
 | **ESLint** | 9.x | Linter untuk kualitas kode |
-| **Electron** | 34.0.0 | Desktop app (opsional/future) |
 | **Node.js** | — | JavaScript runtime |
 | **npm** | — | Package manager |
 
@@ -306,11 +304,6 @@ npm run build
 npm start
 ```
 
-### Desktop App (Electron — Opsional)
-
-```bash
-npm run electron-dev
-```
 
 ---
 
