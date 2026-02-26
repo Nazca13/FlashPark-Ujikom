@@ -28,8 +28,6 @@
 - [Prasyarat](#-prasyarat)
 - [Instalasi & Setup](#-instalasi--setup)
 - [Menjalankan Aplikasi](#-menjalankan-aplikasi)
-- [Screenshot](#-screenshot)
-- [Kontributor](#-kontributor)
 - [Lisensi](#-lisensi)
 
 ---
