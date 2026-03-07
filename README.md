@@ -2,8 +2,6 @@
   <img src="public/Logo (1).svg" alt="FlashPark Logo" width="200" />
 </p>
 
-<h1 align="center">FlashPark ⚡🅿️</h1>
-
 <p align="center">
   <strong>Sistem Manajemen Parkir Cerdas & Modern</strong><br/>
   Aplikasi web full-stack untuk mengelola area parkir secara real-time — mulai dari check-in, check-out, perhitungan biaya otomatis, hingga laporan pendapatan.
