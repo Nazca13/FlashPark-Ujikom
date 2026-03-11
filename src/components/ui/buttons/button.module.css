@@ -1,17 +1,43 @@
+/**
+ * ============================================================================
+ * BUTTON CSS MODULE - src/components/ui/buttons/button.module.css
+ * ============================================================================
+ * Styling untuk komponen Button (tombol primary biru FlashPark).
+ * 
+ * @module ButtonStyles
+ * ============================================================================
+ */
+
+/* ===== TOMBOL PRIMARY (BIRU) ===== */
+/* .btnPrimary = tombol utama dengan warna biru FlashPark */
 .btnPrimary {
   width: 100%;
+  /* lebar penuh mengikuti container */
   height: 48px;
+  /* tinggi tetap 48px */
   background-color: #204DD2;
+  /* warna biru FlashPark */
   color: white;
+  /* teks putih */
   font-weight: bold;
+  /* teks tebal */
   font-size: 16px;
+  /* ukuran font */
   border: none;
+  /* tanpa border */
   border-radius: 12px;
+  /* sudut membulat */
   cursor: pointer;
+  /* cursor tangan saat hover */
   transition: background-color 0.3s ease;
+  /* animasi warna saat hover */
   margin-top: 10px;
+  /* jarak atas */
 }
 
+/* ===== HOVER TOMBOL ===== */
+/* efek saat mouse diarahkan ke tombol: warna jadi lebih gelap */
 .btnPrimary:hover {
   background-color: #1a3fb0;
+  /* biru lebih gelap saat hover */
 }

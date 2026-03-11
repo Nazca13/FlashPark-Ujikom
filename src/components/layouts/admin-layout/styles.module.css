@@ -1,15 +1,34 @@
+/**
+ * ============================================================================
+ * ADMIN LAYOUT CSS - src/components/layouts/admin-layout/styles.module.css
+ * ============================================================================
+ * Styling untuk layout dashboard Admin.
+ * Mengatur posisi sidebar dan area konten utama.
+ * 
+ * @module AdminLayoutStyles
+ * ============================================================================
+ */
+
+/* ===== CONTAINER UTAMA ===== */
+/* .container = pembungkus seluruh halaman (sidebar + konten) */
 .container {
   min-height: 100vh;
+  /* minimal setinggi layar penuh */
   background-color: #F2F3F7;
-  /* Sesuai Background Gambar */
+  /* warna abu-abu terang (sesuai background gambar desain) */
   font-family: 'Inter', sans-serif;
-  /* Pastikan font mirip */
+  /* font Inter, fallback ke sans-serif */
 }
 
+/* ===== AREA KONTEN UTAMA ===== */
+/* .mainContent = area di sebelah kanan sidebar */
 .mainContent {
   margin-left: 260px;
-  /* Memberi ruang untuk sidebar fixed */
+  /* memberi ruang untuk sidebar yang fixed (lebar sidebar = 260px) */
   padding: 40px;
+  /* padding di dalam area konten */
   min-height: 100vh;
+  /* minimal setinggi layar */
   width: calc(100% - 260px);
+  /* lebar = total layar dikurangi lebar sidebar */
 }

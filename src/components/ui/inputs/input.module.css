@@ -1,34 +1,74 @@
+/**
+ * ============================================================================
+ * INPUT CSS MODULE - src/components/ui/inputs/input.module.css
+ * ============================================================================
+ * Styling untuk komponen Input reusable.
+ * Mengatur tampilan group label + input field.
+ * 
+ * @module InputStyles
+ * ============================================================================
+ */
+
+/* ===== GROUP INPUT ===== */
+/* .inputGroup = wrapper yang membungkus label dan input field */
 .inputGroup {
   width: 100%;
+  /* lebar penuh mengikuti parent */
   margin-bottom: 20px;
+  /* jarak ke elemen berikutnya di bawah */
 }
 
+/* ===== LABEL ===== */
+/* .label = teks label di atas input (contoh: "Username") */
 .label {
   display: block;
+  /* tampilkan sebagai block (satu baris penuh) */
   font-size: 14px;
+  /* ukuran font */
   font-weight: bold;
+  /* teks tebal */
   color: #1A1A1A;
+  /* warna hitam */
   margin-bottom: 8px;
+  /* jarak label ke input */
   margin-left: 4px;
+  /* sedikit indent dari kiri */
 }
 
+/* ===== INPUT FIELD ===== */
+/* .inputField = kotak input tempat user mengetik */
 .inputField {
   width: 100%;
+  /* lebar penuh */
   height: 48px;
+  /* tinggi tetap 48px */
   padding: 0 16px;
+  /* padding kiri-kanan (teks tidak nempel ke pinggir) */
   background-color: #F1F1F1;
+  /* latar belakang abu-abu muda */
   border: 1px solid transparent;
+  /* border transparan (muncul saat focus) */
   border-radius: 12px;
+  /* sudut membulat */
   font-size: 16px;
+  /* ukuran font */
   outline: none;
+  /* hilangkan outline default browser */
   transition: all 0.3s ease;
+  /* animasi halus untuk semua perubahan */
   box-sizing: border-box;
-  /* Agar padding tidak menambah lebar */
+  /* agar padding tidak menambah lebar total */
   color: #333333;
+  /* warna teks */
 }
 
+/* ===== INPUT SAAT FOCUS ===== */
+/* efek saat user mengklik/fokus ke input: border biru + glow */
 .inputField:focus {
   border-color: #204DD2;
+  /* border berubah jadi biru FlashPark */
   background-color: #ffffff;
+  /* background berubah jadi putih */
   box-shadow: 0 0 0 4px rgba(32, 77, 210, 0.1);
+  /* efek glow biru tipis */
 }

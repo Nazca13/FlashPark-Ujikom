@@ -1,115 +1,225 @@
+/**
+ * ============================================================================
+ * SIGN-IN PAGE CSS MODULE - src/components/auth/sign-in-page.module.css
+ * ============================================================================
+ * Styling untuk halaman login (sign in) FlashPark.
+ * Mengatur tampilan form login: container, judul, input, tombol, dan error.
+ * 
+ * CSS Module: Class di sini hanya berlaku di komponen sign-in-page.js
+ * 
+ * @module SignInPageStyles
+ * ============================================================================
+ */
+
+/* ===== CONTAINER UTAMA ===== */
+/* .container = pembungkus seluruh form login */
 .container {
     width: 100%;
+    /* lebar penuh mengikuti parent */
     max-width: 400px;
+    /* tapi maksimal 400px (agar tidak terlalu lebar) */
     margin: 0 auto;
+    /* center horizontal (margin kiri-kanan otomatis) */
     text-align: center;
+    /* teks rata tengah */
 }
 
+/* ===== JUDUL HALAMAN ===== */
+/* .title = "Masuk ke FlashPark" */
 .title {
     font-size: 24px;
+    /* ukuran font besar */
     font-weight: 800;
+    /* sangat tebal (extra bold) */
     color: #1F2937;
+    /* warna abu-abu gelap */
     margin-bottom: 8px;
+    /* jarak bawah ke subtitle */
 }
 
+/* ===== SUB JUDUL ===== */
+/* .subtitle = "Sistem Manajemen Parkir Modern" */
 .subtitle {
     font-size: 14px;
+    /* ukuran font kecil */
     color: #6B7280;
+    /* warna abu-abu medium */
     margin-bottom: 32px;
+    /* jarak bawah lebih besar ke form */
 }
 
+/* ===== FORM LOGIN ===== */
+/* .form = container form yang berisi input username, password, dan tombol */
 .form {
     display: flex;
+    /* mode flexbox */
     flex-direction: column;
+    /* susun vertikal (atas ke bawah) */
     gap: 20px;
+    /* jarak antar elemen 20px */
     text-align: left;
+    /* teks rata kiri (override dari container) */
 }
 
+/* ===== GROUP INPUT (LABEL + INPUT) ===== */
+/* .inputGroup = pasangan label + input field */
 .inputGroup {
     display: flex;
+    /* mode flexbox */
     flex-direction: column;
+    /* label di atas, input di bawah */
     gap: 8px;
+    /* jarak label ke input 8px */
 }
 
+/* ===== LABEL INPUT ===== */
+/* .label = teks "Username" atau "Password" di atas input */
 .label {
     font-size: 14px;
+    /* ukuran font */
     font-weight: 600;
+    /* tebal (semi-bold) */
     color: #374151;
+    /* warna abu-abu gelap */
 }
 
+/* ===== INPUT FIELD ===== */
+/* .input = kotak input tempat user mengetik */
 .input {
     width: 100%;
+    /* lebar penuh */
     padding: 14px 18px;
+    /* padding atas-bawah 14px, kiri-kanan 18px */
     font-size: 15px;
+    /* ukuran font di dalam input */
     border: 1px solid #E5E7EB;
+    /* border abu-abu tipis */
     border-radius: 12px;
+    /* sudut membulat */
     background: white;
+    /* latar belakang putih */
     color: #1F2937;
+    /* warna teks gelap */
     transition: all 0.2s;
+    /* animasi halus saat focus */
 }
 
+/* ===== PLACEHOLDER INPUT ===== */
+/* styling teks placeholder (teks abu-abu saat input kosong) */
 .input::placeholder {
     color: #9CA3AF;
+    /* warna abu-abu terang */
 }
 
+/* ===== INPUT SAAT DI-FOCUS (DIKLIK) ===== */
+/* efek saat user mengklik/fokus ke input field */
 .input:focus {
     outline: none;
+    /* hilangkan outline default browser */
     border-color: #3B82F6;
+    /* border berubah jadi biru */
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    /* efek glow biru tipis di luar border */
 }
 
+/* ===== PASSWORD WRAPPER ===== */
+/* .passwordWrapper = container untuk input password + tombol show/hide */
 .passwordWrapper {
     position: relative;
+    /* relatif agar tombol toggle bisa absolute di dalamnya */
     width: 100%;
+    /* lebar penuh */
 }
 
+/* ===== TOMBOL TOGGLE PASSWORD (SHOW/HIDE) ===== */
+/* .passwordToggle = ikon mata untuk show/hide password */
 .passwordToggle {
     position: absolute;
+    /* posisi absolute di dalam wrapper */
     right: 12px;
+    /* 12px dari kanan */
     top: 50%;
+    /* ditengah vertikal */
     transform: translateY(-50%);
+    /* koreksi centering (geser setengah tinggi ke atas) */
     background: none;
+    /* tanpa background */
     border: none;
+    /* tanpa border */
     cursor: pointer;
+    /* cursor tangan saat hover */
     display: flex;
+    /* flexbox untuk centering ikon */
     align-items: center;
+    /* center vertikal */
     justify-content: center;
+    /* center horizontal */
     padding: 4px;
+    /* padding kecil */
     border-radius: 50%;
+    /* bulat sempurna */
     transition: background-color 0.2s;
+    /* animasi saat hover */
 }
 
+/* efek hover pada tombol toggle password */
 .passwordToggle:hover {
     background-color: #F3F4F6;
+    /* background abu-abu muda saat hover */
 }
 
+/* efek focus pada tombol toggle password */
 .passwordToggle:focus {
     outline: none;
+    /* hilangkan outline default */
     background-color: #E5E7EB;
+    /* background sedikit lebih gelap */
 }
 
+/* ===== TOMBOL LOGIN ===== */
+/* .button = tombol "Masuk Sekarang" */
 .button {
     margin-top: 10px;
+    /* jarak atas ke error message atau input */
     padding: 14px;
+    /* padding dalam tombol */
     background: #4F46E5;
+    /* warna indigo (ungu kebiruan) */
     color: white;
+    /* teks putih */
     border: none;
+    /* tanpa border */
     border-radius: 8px;
+    /* sudut membulat */
     font-weight: 600;
+    /* teks tebal */
     cursor: pointer;
+    /* cursor tangan */
     transition: background 0.2s;
+    /* animasi saat hover */
 }
 
+/* efek hover tombol login */
 .button:hover {
     background: #4338CA;
+    /* warna lebih gelap saat hover */
 }
 
+/* ===== PESAN ERROR ===== */
+/* .error = kotak merah untuk menampilkan pesan error login */
 .error {
     background: #FEE2E2;
+    /* latar belakang merah muda */
     color: #B91C1C;
+    /* teks merah gelap */
     padding: 12px;
+    /* padding dalam */
     border-radius: 8px;
+    /* sudut membulat */
     font-size: 14px;
+    /* ukuran font */
     font-weight: 500;
+    /* ketebalan medium */
     text-align: center;
+    /* teks rata tengah */
 }

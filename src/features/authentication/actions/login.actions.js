@@ -1,58 +1,95 @@
-// ini artinya fungsi ini jalan di server, bukan di browser user
+/**
+ * ============================================================================
+ * LOGIN ACTIONS - src/features/authentication/actions/login.actions.js
+ * ============================================================================
+ * Server actions untuk proses autentikasi (login & logout).
+ * 
+ * Alur Login:
+ * 1. Validasi input (username & password tidak boleh kosong)
+ * 2. Cari user di database berdasarkan username
+ * 3. Cocokkan password
+ * 4. Simpan session ke cookie browser (user_id dan role)
+ * 5. Catat log "Login ke sistem"
+ * 6. Redirect ke dashboard sesuai role (admin/petugas/owner)
+ * 
+ * Alur Logout:
+ * 1. Ambil user ID dari cookie (untuk log)
+ * 2. Catat log "Logout dari sistem"
+ * 3. Hapus semua cookie session
+ * 4. Redirect ke halaman login
+ * 
+ * CATATAN KEAMANAN: Password disimpan plain text (tanpa hash)
+ * karena ini proyek untuk ujikom. Di production, gunakan bcrypt!
+ * 
+ * @module LoginActions
+ * @path /signin (login), semua halaman (logout)
+ * ============================================================================
+ */
+
+// direktif: fungsi ini hanya jalan di server, bukan di browser user
 "use server";
 
-// import prisma = ambil koneksi database kita
+// import koneksi database Prisma (singleton)
 import prisma from "@/lib/database/prisma";
 
-// redirect = buat pindah halaman otomatis setelah login sukses
+// import redirect = fungsi Next.js untuk pindah halaman secara otomatis dari server
 import { redirect } from "next/navigation";
 
-// cookies = buat simpan data session user di browser (kayak tanda dia udah login)
+// import cookies = fungsi Next.js untuk membaca/menulis cookie browser dari server
+// cookie dipakai sebagai "session" (tanda bahwa user sudah login)
 import { cookies } from "next/headers";
 
+// import fungsi writeLog untuk mencatat aktivitas login/logout
 import { writeLog } from "@/features/logs/actions/log.action";
 
-// fungsi utama login, dipanggil pas user klik tombol "masuk"
-// prevState = state sebelumnya (buat error handling)
-// formData = data dari form (username & password)
+/**
+ * loginAction - Proses login user
+ * 
+ * Dipanggil saat user submit form login (via useActionState).
+ * 
+ * @param {Object} prevState - State sebelumnya (berisi error message jika ada)
+ * @param {FormData} formData - Data form berisi username dan password
+ * @returns {Object} - { error: "..." } jika gagal, tidak return apa-apa jika berhasil (redirect)
+ */
 export async function loginAction(prevState, formData) {
-  // ambil username dari form
-  const username = formData.get("username");
-  // ambil password dari form
-  const password = formData.get("password");
+  // ===== 1. AMBIL DATA DARI FORM =====
+  const username = formData.get("username");   // ambil username dari input
+  const password = formData.get("password");   // ambil password dari input
 
-  // cek dulu, kalo ada yg kosong langsung tolak
+  // ===== 2. VALIDASI INPUT =====
+  // cek apakah username dan password terisi
   if (!username || !password) {
     return { error: "Username dan Password harus diisi!" };
   }
 
-  // cari user di database berdasarkan username
-  // findFirst = ambil data pertama yg cocok
+  // ===== 3. CARI USER DI DATABASE =====
+  // findFirst = cari 1 data pertama yang cocok berdasarkan username
   const user = await prisma.tb_user.findFirst({
     where: { username: username },
   });
 
-  // kalo user ga ketemu ATAU password salah, tolak
-  // ini validasi keamanan dasar
+  // ===== 4. VALIDASI USER & PASSWORD =====
+  // kalau user tidak ditemukan ATAU password tidak cocok → tolak
   if (!user || user.password !== password) {
     return { error: "Username atau Password salah!" };
   }
 
-  // kalo sampe sini = login sukses!
-  // sekarang simpan session ke cookie browser
+  // ===== 5. SIMPAN SESSION KE COOKIE =====
+  // kalau sampai sini = login BERHASIL!
+  // simpan data session ke cookie browser agar server tahu siapa yang login
 
   // ambil akses ke cookie store
   const cookieStore = await cookies();
 
-  // simpan id user ke cookie, biar tau siapa yg login
+  // simpan ID user ke cookie "session_user_id"
   cookieStore.set("session_user_id", user.id_user.toString(), {
-    httpOnly: true, // cookie ga bisa diakses javascript (lebih aman)
-    secure: process.env.NODE_ENV === "production", // https only di production
-    maxAge: 60 * 60 * 24 * 7, // berlaku 1 minggu
-    path: "/", // berlaku di semua halaman
+    httpOnly: true,                                // cookie tidak bisa diakses JavaScript browser (mencegah XSS)
+    secure: process.env.NODE_ENV === "production", // hanya kirim lewat HTTPS di production
+    maxAge: 60 * 60 * 24 * 7,                      // berlaku 7 hari (60s × 60m × 24h × 7d = 604800 detik)
+    path: "/",                                     // berlaku di semua halaman
   });
 
-  // simpan juga role user (admin/petugas/owner)
+  // simpan role user ke cookie "session_role"
   cookieStore.set("session_role", user.role, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -60,39 +97,47 @@ export async function loginAction(prevState, formData) {
     path: "/",
   });
 
-  // catat log login
+  // ===== 6. CATAT LOG AKTIVITAS =====
+  // simpan catatan bahwa user berhasil login
   await writeLog(user.id_user, "Login ke sistem");
 
-  // sekarang redirect (pindah halaman) sesuai role user
+  // ===== 7. REDIRECT KE DASHBOARD SESUAI ROLE =====
+  // setiap role punya dashboard sendiri dengan fitur berbeda
   if (user.role === "admin") {
-    // admin masuk ke dashboard admin
-    redirect("/dashboard/admin");
+    redirect("/dashboard/admin");       // admin → kelola user, tarif, area, log
   } else if (user.role === "petugas") {
-    // petugas masuk ke dashboard petugas
-    redirect("/dashboard/petugas");
+    redirect("/dashboard/petugas");     // petugas → check-in/checkout kendaraan
   } else if (user.role === "owner") {
-    // owner masuk ke dashboard owner
-    redirect("/dashboard/owner");
+    redirect("/dashboard/owner");       // owner → lihat laporan keuangan
   }
 
-  // kalo role ga dikenali (harusnya ga mungkin sih)
+  // fallback: kalau role tidak dikenali (seharusnya tidak terjadi karena enum)
   return { error: "Role tidak dikenali!" };
 }
 
-// fungsi logout, dipanggil pas user klik tombol keluar
+/**
+ * logoutAction - Proses logout user
+ * 
+ * Dipanggil saat user klik tombol "Log Out" di sidebar.
+ * Menghapus semua cookie session dan redirect ke halaman login.
+ */
 export async function logoutAction() {
+  // ambil akses ke cookie store
   const cookieStore = await cookies();
 
-  // ambil user id sebelum dihapus buat log
+  // ambil user ID dari cookie sebelum dihapus (untuk mencatat log)
   const userId = cookieStore.get("session_user_id")?.value;
+  // ?. = optional chaining: kalau cookie tidak ada, return undefined
+
+  // catat log logout (hanya kalau ada user ID)
   if (userId) {
     await writeLog(userId, "Logout dari sistem");
   }
 
   // hapus semua cookie session
-  cookieStore.delete("session_user_id");
-  cookieStore.delete("session_role");
+  cookieStore.delete("session_user_id");   // hapus ID user
+  cookieStore.delete("session_role");       // hapus role
 
-  // balik ke halaman login
+  // redirect ke halaman login
   redirect("/signin");
 }

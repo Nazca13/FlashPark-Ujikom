@@ -1,38 +1,81 @@
+/**
+ * ============================================================================
+ * STAT CARD CSS MODULE - src/components/ui/stats/stat-card.module.css
+ * ============================================================================
+ * Styling untuk komponen StatCard (kartu statistik dashboard).
+ * 
+ * @module StatCardStyles
+ * ============================================================================
+ */
+
+/* ===== KARTU STATISTIK ===== */
+/* .card = container utama kartu dengan layout horizontal */
 .card {
   background: white;
+  /* latar belakang putih */
   padding: 24px;
+  /* padding di dalam card */
   border-radius: 16px;
+  /* sudut membulat modern */
   display: flex;
+  /* flexbox untuk layout horizontal */
   justify-content: space-between;
+  /* teks di kiri, ikon di kanan */
   align-items: center;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+  /* center vertikal */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  /* shadow sangat tipis (subtle) */
   min-height: 140px;
+  /* tinggi minimal card */
 }
 
+/* ===== GROUP TEKS (JUDUL + NILAI) ===== */
+/* .textGroup = container judul dan nilai yang disusun vertikal */
 .textGroup {
   display: flex;
+  /* flexbox vertikal */
   flex-direction: column;
-  gap: 15px; /* Jarak antara judul dan nilai */
+  /* dari atas ke bawah */
+  gap: 15px;
+  /* jarak antara judul dan nilai */
 }
 
+/* ===== JUDUL STATISTIK ===== */
+/* .title = teks judul seperti "Total Pendapatan" */
 .title {
   font-size: 14px;
+  /* ukuran kecil */
   color: #6B7280;
+  /* warna abu-abu */
   font-weight: 500;
+  /* ketebalan medium */
 }
 
+/* ===== NILAI STATISTIK ===== */
+/* .value = angka/nilai besar seperti "Rp 500.000" atau "42" */
 .value {
   font-size: 28px;
+  /* ukuran besar */
   font-weight: 700;
+  /* tebal */
   color: #111827;
+  /* warna hitam */
 }
 
+/* ===== WRAPPER IKON ===== */
+/* .iconWrapper = container ikon di sebelah kanan card */
 .iconWrapper {
   width: 56px;
+  /* ukuran wrapper */
   height: 56px;
+  /* ukuran wrapper */
   display: flex;
+  /* flexbox untuk centering */
   align-items: center;
+  /* center vertikal */
   justify-content: center;
+  /* center horizontal */
   position: relative;
-  /* Background dihapus karena icon sudah punya background sendiri */
+  /* relatif untuk child absolute */
+  /* Background dihapus karena icon SVG sudah punya background sendiri */
 }

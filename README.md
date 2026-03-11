@@ -2,7 +2,7 @@
   <img src="public/Logo (1).svg" alt="FlashPark Logo" width="200" />
 </p>
 
-<h1 align="center">FlashPark ⚡🅿️</h1>
+<h1 align="center">FlashPark</h1>
 
 <p align="center">
   <strong>Sistem Manajemen Parkir Cerdas & Modern</strong><br/>
@@ -122,7 +122,7 @@ Aplikasi menggunakan **PostgreSQL** dengan **6 tabel utama** yang saling berelas
 
 ```
 ┌──────────────────┐       ┌──────────────────┐
-│    tb_user        │       │    tb_tarif       │
+│    tb_user       │       │    tb_tarif      │
 ├──────────────────┤       ├──────────────────┤
 │ id_user (PK)     │       │ id_tarif (PK)    │
 │ nama_lengkap     │       │ jenis_kendaraan  │

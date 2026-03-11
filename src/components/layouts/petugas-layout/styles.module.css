@@ -1,76 +1,151 @@
-/* Copy dari DashboardLayout.module.css untuk konsistensi */
+/**
+ * ============================================================================
+ * PETUGAS LAYOUT CSS - src/components/layouts/petugas-layout/styles.module.css
+ * ============================================================================
+ * Styling untuk layout dashboard Petugas.
+ * Struktur sama dengan layout admin dan owner demi konsistensi visual.
+ * Dicopy dari DashboardLayout.module.css untuk konsistensi antar role.
+ * 
+ * @module PetugasLayoutStyles
+ * ============================================================================
+ */
+
+/* ===== CONTAINER UTAMA ===== */
+/* .container = pembungkus sidebar + konten */
 .container {
   display: flex;
+  /* mode flexbox horizontal */
   min-height: 100vh;
+  /* minimal setinggi layar */
   background-color: #F9FAFB;
+  /* latar belakang abu-abu muda */
 }
 
+/* ===== SIDEBAR ===== */
+/* .sidebar = menu navigasi fixed di kiri */
 .sidebar {
   width: 260px;
+  /* lebar tetap 260px */
   background: white;
+  /* putih bersih */
   border-right: 1px solid #E5E7EB;
+  /* garis pemisah kanan */
   display: flex;
+  /* flexbox vertikal */
   flex-direction: column;
+  /* dari atas ke bawah */
   position: fixed;
+  /* tetap di tempat saat scroll */
   height: 100vh;
+  /* penuh tinggi layar */
   overflow-y: auto;
+  /* scroll jika konten lebih panjang dari layar */
 }
 
+/* ===== AREA LOGO ===== */
+/* .logoArea = tempat logo FlashPark di atas sidebar */
 .logoArea {
   padding: 30px 20px;
+  /* padding dalam */
   border-bottom: 1px solid #E5E7EB;
+  /* garis bawah pemisah */
   text-align: center;
+  /* logo center */
 }
 
+/* ===== GRUP MENU ===== */
+/* .menuGroup = container daftar menu navigasi */
 .menuGroup {
   flex: 1;
+  /* isi ruang antara logo dan footer */
   padding: 20px 0;
+  /* padding atas-bawah */
 }
 
+/* ===== JUDUL GRUP MENU ===== */
+/* .menuTitle = label "Menu Petugas" */
 .menuTitle {
   padding: 0 20px;
+  /* padding kiri-kanan */
   font-size: 12px;
+  /* ukuran kecil */
   font-weight: 600;
+  /* tebal */
   color: #6B7280;
+  /* abu-abu */
   text-transform: uppercase;
+  /* semua huruf besar */
   letter-spacing: 0.5px;
+  /* jarak antar huruf */
   margin-bottom: 10px;
+  /* jarak ke menu pertama */
 }
 
+/* ===== ITEM MENU ===== */
+/* .menuItem = setiap item menu navigasi */
 .menuItem {
   display: flex;
+  /* ikon dan teks sejajar horizontal */
   align-items: center;
+  /* center vertikal */
   gap: 12px;
+  /* jarak ikon ke teks */
   padding: 12px 20px;
+  /* padding dalam */
   margin: 4px 16px;
+  /* margin luar */
   border-radius: 8px;
+  /* sudut bulat */
   color: #1A1A1A;
+  /* teks hitam */
   text-decoration: none;
+  /* tanpa underline */
   font-size: 14px;
+  /* ukuran font */
   font-weight: 500;
+  /* medium */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* animasi halus */
   background-color: transparent;
+  /* default transparan */
 }
 
+/* ===== HOVER MENU ===== */
+/* efek saat hover: geser ke kanan 4px */
 .menuItem:hover {
   transform: translateX(4px);
 }
 
+/* ===== MENU AKTIF ===== */
+/* .activeMenu = highlight menu yang sedang dibuka */
 .activeMenu {
   background-color: #204DD2;
+  /* biru FlashPark */
   color: #FFFFFF;
+  /* teks putih */
   font-weight: 600;
+  /* lebih tebal */
   box-shadow: 0 4px 12px rgba(32, 77, 210, 0.25);
+  /* shadow biru */
 }
 
+/* ===== FOOTER ===== */
+/* .footer = tombol logout di bawah sidebar */
 .footer {
   padding: 20px;
   border-top: 1px solid #E5E7EB;
+  /* garis pemisah atas */
 }
 
+/* ===== KONTEN UTAMA ===== */
+/* .mainContent = area konten di kanan sidebar */
 .mainContent {
   flex: 1;
+  /* isi sisa ruang */
   margin-left: 260px;
+  /* geser dari kiri sebesar lebar sidebar */
   padding: 40px;
+  /* padding dalam konten */
   overflow-y: auto;
+  /* scroll vertikal */
 }

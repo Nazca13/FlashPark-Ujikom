@@ -1,76 +1,151 @@
-/* Copy dari OwnerLayout.module.css untuk konsistensi */
+/**
+ * ============================================================================
+ * OWNER LAYOUT CSS - src/components/layouts/owner-layout/styles.module.css
+ * ============================================================================
+ * Styling untuk layout dashboard Owner (pemilik parkir).
+ * Sama strukturnya dengan layout admin: sidebar fixed di kiri + konten di kanan.
+ * Dicopy dari layout admin demi konsistensi visual antar role.
+ * 
+ * @module OwnerLayoutStyles
+ * ============================================================================
+ */
+
+/* ===== CONTAINER UTAMA ===== */
+/* .container = pembungkus sidebar + konten (flexbox horizontal) */
 .container {
     display: flex;
+    /* mode flexbox untuk sidebar + konten sejajar */
     min-height: 100vh;
+    /* minimal setinggi layar */
     background-color: #F9FAFB;
+    /* warna latar belakang abu-abu sangat terang */
 }
 
+/* ===== SIDEBAR (MENU SAMPING KIRI) ===== */
+/* .sidebar = menu navigasi fixed di sisi kiri */
 .sidebar {
     width: 260px;
+    /* lebar sidebar 260px */
     background: white;
+    /* background putih bersih */
     border-right: 1px solid #E5E7EB;
+    /* garis pemisah kanan (abu-abu) */
     display: flex;
+    /* flexbox untuk susun logo, menu, logout */
     flex-direction: column;
+    /* vertikal (atas ke bawah) */
     position: fixed;
+    /* fixed: tetap di tempat saat halaman di-scroll */
     height: 100vh;
+    /* tinggi penuh layar */
     overflow-y: auto;
+    /* scroll vertikal kalau menu terlalu banyak */
 }
 
+/* ===== AREA LOGO ===== */
+/* .logoArea = bagian paling atas sidebar untuk logo FlashPark */
 .logoArea {
     padding: 30px 20px;
+    /* padding di dalam area logo */
     border-bottom: 1px solid #E5E7EB;
+    /* garis pemisah bawah */
     text-align: center;
+    /* logo di tengah */
 }
 
+/* ===== GRUP MENU ===== */
+/* .menuGroup = container untuk list menu navigasi */
 .menuGroup {
     flex: 1;
+    /* mengisi ruang yang tersisa antara logo dan logout */
     padding: 20px 0;
+    /* padding atas-bawah */
 }
 
+/* ===== JUDUL GRUP MENU ===== */
+/* .menuTitle = label "Menu Owner" di atas daftar menu */
 .menuTitle {
     padding: 0 20px;
+    /* padding kiri-kanan */
     font-size: 12px;
+    /* ukuran kecil */
     font-weight: 600;
+    /* tebal */
     color: #6B7280;
+    /* abu-abu */
     text-transform: uppercase;
+    /* huruf kapital semua */
     letter-spacing: 0.5px;
+    /* jarak antar huruf */
     margin-bottom: 10px;
+    /* jarak ke menu pertama */
 }
 
+/* ===== ITEM MENU ===== */
+/* .menuItem = setiap item menu di sidebar (Dashboard, dll) */
 .menuItem {
     display: flex;
+    /* flexbox untuk ikon + teks sejajar */
     align-items: center;
+    /* vertikal center */
     gap: 12px;
+    /* jarak antara ikon dan teks */
     padding: 12px 20px;
+    /* padding dalam */
     margin: 4px 16px;
+    /* margin luar (biar ada jarak dari tepi sidebar) */
     border-radius: 8px;
+    /* sudut membulat */
     color: #1A1A1A;
+    /* warna teks hitam */
     text-decoration: none;
+    /* hilangkan underline link */
     font-size: 14px;
+    /* ukuran font */
     font-weight: 500;
+    /* ketebalan medium */
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* animasi halus dengan kurva ease-in-out */
 }
 
+/* ===== EFEK HOVER MENU ===== */
+/* saat cursor diarahkan ke menu, geser sedikit ke kanan */
 .menuItem:hover {
     transform: translateX(4px);
+    /* geser 4px ke kanan (feedback visual) */
 }
 
+/* ===== MENU AKTIF ===== */
+/* .activeMenu = styling untuk menu yang sedang aktif (halaman yang dibuka) */
 .activeMenu {
     background-color: #204DD2;
-    /* Konsisten: Biru Tua */
+    /* warna biru FlashPark */
     color: #FFFFFF;
+    /* teks putih */
     font-weight: 600;
+    /* lebih tebal dari normal */
     box-shadow: 0 4px 12px rgba(32, 77, 210, 0.25);
+    /* shadow biru untuk efek "menonjol" */
 }
 
+/* ===== FOOTER SIDEBAR ===== */
+/* .footer = bagian bawah sidebar untuk tombol logout */
 .footer {
     padding: 20px;
+    /* padding di dalam */
     border-top: 1px solid #E5E7EB;
+    /* garis pemisah atas */
 }
 
+/* ===== AREA KONTEN UTAMA ===== */
+/* .mainContent = area konten di sebelah kanan sidebar */
 .mainContent {
     flex: 1;
+    /* mengisi sisa ruang yang tersedia */
     margin-left: 260px;
+    /* geser ke kanan sejauh lebar sidebar */
     padding: 40px;
+    /* padding di dalam konten */
     overflow-y: auto;
+    /* scroll kalau konten terlalu panjang */
 }

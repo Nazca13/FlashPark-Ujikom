@@ -1,71 +1,137 @@
+/**
+ * ============================================================================
+ * SIDEBAR CSS MODULE - src/components/layouts/shared/sidebar.module.css
+ * ============================================================================
+ * Styling untuk komponen Sidebar shared (dipakai oleh Admin layout).
+ * Sidebar ini fixed di sisi kiri dan berisi logo, menu navigasi, dan logout.
+ * 
+ * @module SidebarStyles
+ * ============================================================================
+ */
+
+/* ===== SIDEBAR UTAMA ===== */
+/* .sidebar = container sidebar keseluruhan */
 .sidebar {
   width: 260px;
+  /* lebar tetap 260px */
   background-color: #FFFFFF;
+  /* background putih */
   display: flex;
+  /* flexbox untuk susun konten vertikal */
   flex-direction: column;
+  /* susun dari atas ke bawah */
   padding: 30px;
+  /* padding di dalam sidebar */
   border-right: 1px solid #E5E7EB;
+  /* garis pemisah kanan (abu-abu tipis) */
   position: fixed;
-  /* Agar sidebar tetap diam saat scroll */
+  /* fixed agar sidebar tetap diam saat halaman di-scroll */
   height: 100vh;
+  /* tinggi penuh layar */
   left: 0;
+  /* nempel di kiri */
   top: 0;
+  /* nempel di atas */
 }
 
+/* ===== AREA LOGO ===== */
+/* .logoArea = bagian atas sidebar untuk logo */
 .logoArea {
   display: flex;
+  /* flexbox untuk layout logo */
   align-items: center;
+  /* center vertikal */
   gap: 12px;
+  /* jarak antara logo dan nama brand */
   margin-bottom: 50px;
+  /* jarak besar ke menu di bawah */
 }
 
+/* ===== NAMA BRAND ===== */
+/* .brandName = teks nama brand "FlashPark" (jika dipakai) */
 .brandName {
   font-size: 20px;
+  /* ukuran font besar */
   font-weight: 800;
+  /* extra bold */
   color: #0D1421;
+  /* warna hitam pekat */
 }
 
+/* ===== GRUP MENU NAVIGASI ===== */
+/* .menuGroup = container semua item menu */
 .menuGroup {
   display: flex;
+  /* flexbox vertikal */
   flex-direction: column;
+  /* susun menu dari atas ke bawah */
   gap: 8px;
+  /* jarak antar item menu */
   flex: 1;
+  /* mengisi ruang antara logo dan footer */
 }
 
+/* ===== JUDUL MENU ===== */
+/* .menuTitle = label kecil "Main Menu" di atas daftar menu */
 .menuTitle {
   font-size: 12px;
+  /* ukuran sangat kecil */
   color: #9CA3AF;
+  /* abu-abu terang */
   margin-bottom: 10px;
+  /* jarak ke item menu pertama */
   margin-left: 10px;
+  /* sedikit indent dari kiri */
 }
 
-/* Menu Item Default (Inactive) */
+/* ===== ITEM MENU (DEFAULT / INACTIVE) ===== */
+/* .menuItem = styling default setiap item menu (belum diklik) */
 .menuItem {
   display: flex;
+  /* ikon dan teks sejajar */
   align-items: center;
+  /* center vertikal */
   gap: 14px;
+  /* jarak ikon ke teks */
   padding: 14px 18px;
+  /* padding dalam item */
   border-radius: 12px;
+  /* sudut bulat */
   text-decoration: none;
+  /* hilangkan underline link */
   color: #4B5563;
-  /* Abu-abu gelap */
+  /* warna abu-abu gelap */
   font-weight: 500;
+  /* ketebalan medium */
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* animasi interaksi yang halus */
   background-color: transparent;
+  /* default transparan */
 }
 
+/* ===== HOVER MENU ===== */
+/* efek saat hover: geser ke kanan untuk feedback visual */
 .menuItem:hover {
   transform: translateX(4px);
+  /* geser 4px ke kanan */
 }
 
-/* Menu Item Active (Biru) */
+/* ===== ITEM MENU AKTIF (BIRU) ===== */
+/* .activeMenu = styling untuk menu yang sedang aktif/dibuka */
 .activeMenu {
   background-color: #204DD2;
+  /* warna biru FlashPark sebagai background */
   color: #FFFFFF;
+  /* teks berubah jadi putih */
   font-weight: 600;
+  /* lebih tebal dari normal */
   box-shadow: 0 4px 12px rgba(32, 77, 210, 0.25);
+  /* shadow biru untuk efek "timbul" */
 }
 
+/* ===== FOOTER SIDEBAR ===== */
+/* .footer = area tombol logout di bagian bawah sidebar */
 .footer {
   margin-top: auto;
+  /* dorong ke bawah (auto margin mendorong elemen ke paling bawah flexbox) */
 }

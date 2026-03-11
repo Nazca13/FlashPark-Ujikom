@@ -1,43 +1,75 @@
+/**
+ * ============================================================================
+ * GLOBAL CSS - src/app/globals.css
+ * ============================================================================
+ * File CSS global yang berlaku untuk SELURUH halaman aplikasi FlashPark.
+ * Di sini kita set variabel warna, reset default browser, dan styling dasar.
+ * 
+ * File ini di-import oleh layout.js (root layout) sehingga otomatis
+ * berlaku ke semua halaman tanpa perlu import lagi.
+ * 
+ * @module GlobalStyles
+ * ============================================================================
+ */
+
+/* ===== CSS VARIABLES (Variabel Warna) ===== */
+/* :root = selector untuk elemen paling atas (html) */
+/* variabel yang didefinisikan di sini bisa dipakai di seluruh file CSS */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #ffffff; /* warna latar belakang default (putih) */
+  --foreground: #171717; /* warna teks default (hitam gelap) */
 }
 
+/* ===== DARK MODE SUPPORT ===== */
+/* @media prefers-color-scheme: dark = deteksi kalau user pakai mode gelap di OS-nya */
+/* kalau dark mode aktif, ganti variabel warna jadi gelap */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #0a0a0a; /* latar belakang gelap */
+    --foreground: #ededed; /* teks terang */
   }
 }
 
+/* ===== RESET DEFAULT BROWSER ===== */
+/* html dan body: hilangkan margin dan padding bawaan browser */
+/* setiap browser punya default styling yang beda-beda, jadi kita reset dulu */
 html,
 body {
-  margin: 0;
-  padding: 0;
-  background-color: #F2F3F7;
+  margin: 0;   /* hilangkan jarak luar */
+  padding: 0;  /* hilangkan jarak dalam */
+  background-color: #F2F3F7; /* warna abu-abu terang untuk background utama */
 }
 
+/* styling khusus untuk body */
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  color: var(--foreground);       /* warna teks mengikuti variabel di atas */
+  background: var(--background);  /* warna background mengikuti variabel */
+  font-family: Arial, Helvetica, sans-serif; /* font default aplikasi */
+  -webkit-font-smoothing: antialiased;       /* bikin font lebih halus di Chrome/Safari */
+  -moz-osx-font-smoothing: grayscale;        /* bikin font lebih halus di Firefox Mac */
 }
 
+/* ===== UNIVERSAL BOX SIZING ===== */
+/* * = berlaku ke SEMUA elemen di halaman */
+/* box-sizing: border-box = padding dan border dihitung dalam width/height */
+/* ini mencegah elemen jadi lebih lebar dari yang kita set */
 * {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+  box-sizing: border-box; /* standar modern agar ukuran elemen konsisten */
+  padding: 0;  /* reset padding semua elemen */
+  margin: 0;   /* reset margin semua elemen */
 }
 
+/* ===== STYLING LINK (tag <a>) ===== */
+/* hilangkan styling default link (warna biru dan underline) */
 a {
-  color: inherit;
-  text-decoration: none;
+  color: inherit;          /* warna mengikuti parent element */
+  text-decoration: none;   /* hilangkan garis bawah */
 }
 
+/* ===== DARK MODE UNTUK HTML ===== */
+/* set color-scheme agar browser tahu ini halaman dark mode */
 @media (prefers-color-scheme: dark) {
   html {
-    color-scheme: dark;
+    color-scheme: dark; /* beritahu browser ini mode gelap */
   }
 }

@@ -1,56 +1,113 @@
+/**
+ * ============================================================================
+ * OWNER FILTER CSS - src/features/reports/components/owner-filter/styles.module.css
+ * ============================================================================
+ * Styling untuk komponen OwnerFilter (filter tanggal dashboard owner).
+ * 
+ * @module OwnerFilterStyles
+ * ============================================================================
+ */
+
+/* ===== CARD CONTAINER ===== */
+/* .cardContainer = pembungkus filter dalam card putih */
 .cardContainer {
     background: white;
+    /* latar belakang putih */
     padding: 24px;
+    /* padding di dalam card */
     border-radius: 16px;
+    /* sudut membulat modern */
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+    /* shadow sangat tipis */
     margin-bottom: 30px;
+    /* jarak ke elemen berikutnya */
 }
 
+/* ===== BARIS FILTER ===== */
+/* .filterRow = container horizontal untuk semua input filter */
 .filterRow {
     display: flex;
+    /* flexbox horizontal */
     gap: 20px;
+    /* jarak antar elemen filter */
     align-items: flex-end;
+    /* sejajarkan ke bawah (agar tombol sejajar dengan input) */
 }
 
+/* ===== GRUP FILTER ===== */
+/* .filterGroup = pasangan label + input */
 .filterGroup {
     display: flex;
+    /* flexbox vertikal */
     flex-direction: column;
+    /* label di atas, input di bawah */
     gap: 8px;
+    /* jarak label ke input */
     flex: 1;
+    /* ukuran fleksibel (semua grup sama lebar) */
 }
 
+/* ===== LABEL ===== */
+/* .label = teks "Dari Tanggal" / "Sampai Tanggal" */
 .label {
     font-size: 14px;
+    /* ukuran font */
     font-weight: 600;
+    /* tebal (semi-bold) */
     color: #4B5563;
+    /* warna abu-abu gelap */
 }
 
+/* ===== INPUT FIELD ===== */
+/* .input = kotak input tanggal */
 .input {
     padding: 10px 14px;
+    /* padding dalam input */
     border: 1px solid #E5E7EB;
+    /* border abu-abu tipis */
     border-radius: 8px;
+    /* sudut bulat */
     font-size: 14px;
+    /* ukuran font */
     color: #1F2937;
+    /* warna teks gelap */
     background-color: white;
+    /* latar belakang putih */
     outline: none;
+    /* hilangkan outline default */
     transition: border-color 0.2s;
+    /* animasi saat focus */
 }
 
+/* efek saat input di-focus */
 .input:focus {
     border-color: #204DD2;
+    /* border berubah jadi biru FlashPark */
 }
 
+/* ===== TOMBOL RESET ===== */
+/* .btnReset = tombol "Reset Filter" (abu-abu) */
 .btnReset {
     padding: 10px 16px;
+    /* padding dalam */
     background: #F3F4F6;
+    /* background abu-abu muda */
     border: none;
+    /* tanpa border */
     border-radius: 8px;
+    /* sudut bulat */
     color: #4B5563;
+    /* teks abu-abu gelap */
     font-weight: 600;
+    /* tebal */
     cursor: pointer;
+    /* cursor tangan */
     transition: background 0.2s;
+    /* animasi hover */
 }
 
+/* efek hover tombol reset */
 .btnReset:hover {
     background: #E5E7EB;
+    /* background lebih gelap saat hover */
 }

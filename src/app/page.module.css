@@ -1,141 +1,266 @@
+/**
+ * ============================================================================
+ * PAGE MODULE CSS - src/app/page.module.css
+ * ============================================================================
+ * Styling khusus untuk halaman utama (page.js).
+ * File ini menggunakan CSS Modules, artinya class di sini hanya berlaku
+ * di komponen yang meng-import-nya (tidak bocor ke komponen lain).
+ * 
+ * CSS Modules: Nama class akan otomatis di-hash oleh Next.js saat build,
+ * contoh: .page -> .page_abc123, sehingga tidak akan konflik.
+ * 
+ * CATATAN: Halaman ini sudah tidak dipakai karena page.js langsung redirect
+ * ke /signin. File ini masih ada sebagai referensi styling Next.js default.
+ * 
+ * @module PageStyles
+ * ============================================================================
+ */
+
+/* ===== CONTAINER HALAMAN UTAMA ===== */
+/* .page = pembungkus seluruh halaman, mengisi penuh layar */
 .page {
+  /* CSS Variables lokal - hanya berlaku di dalam .page */
   --background: #fafafa;
+  /* warna latar belakang halaman */
   --foreground: #fff;
+  /* warna foreground (kartu putih) */
 
   --text-primary: #000;
+  /* warna teks utama (hitam) */
   --text-secondary: #666;
+  /* warna teks sekunder (abu-abu) */
 
   --button-primary-hover: #383838;
+  /* warna tombol utama saat hover */
   --button-secondary-hover: #f2f2f2;
+  /* warna tombol sekunder saat hover */
   --button-secondary-border: #ebebeb;
+  /* warna border tombol sekunder */
 
   display: flex;
+  /* mode flexbox untuk centering */
   min-height: 100vh;
+  /* minimal setinggi layar */
   align-items: center;
+  /* posisikan anak ke tengah vertikal */
   justify-content: center;
+  /* posisikan anak ke tengah horizontal */
   font-family: var(--font-geist-sans);
+  /* font dari Next.js Geist */
   background-color: var(--background);
+  /* warna latar belakang */
 }
 
+/* ===== AREA KONTEN UTAMA ===== */
+/* .main = container konten di tengah halaman */
 .main {
   display: flex;
+  /* mode flexbox */
   min-height: 100vh;
+  /* minimal setinggi layar */
   width: 100%;
+  /* lebar penuh */
   max-width: 800px;
+  /* tapi maksimal 800px biar ga terlalu lebar */
   flex-direction: column;
+  /* susun anak dari atas ke bawah */
   align-items: flex-start;
+  /* rata kiri */
   justify-content: space-between;
+  /* bagi ruang antara atas dan bawah */
   background-color: var(--foreground);
+  /* warna background konten (putih) */
   padding: 120px 60px;
+  /* padding atas-bawah 120px, kiri-kanan 60px */
 }
 
+/* ===== SECTION INTRO (JUDUL + DESKRIPSI) ===== */
+/* .intro = bagian perkenalan di atas halaman */
 .intro {
   display: flex;
+  /* mode flexbox */
   flex-direction: column;
+  /* susun vertikal */
   align-items: flex-start;
+  /* rata kiri */
   text-align: left;
+  /* teks rata kiri */
   gap: 24px;
+  /* jarak antar elemen 24px */
 }
 
+/* styling heading h1 di dalam intro */
 .intro h1 {
   max-width: 320px;
+  /* lebar maksimal judul */
   font-size: 40px;
+  /* ukuran font besar */
   font-weight: 600;
+  /* ketebalan semi-bold */
   line-height: 48px;
+  /* tinggi baris */
   letter-spacing: -2.4px;
+  /* jarak antar huruf negatif (lebih rapat) */
   text-wrap: balance;
+  /* seimbangkan panjang baris */
   color: var(--text-primary);
+  /* warna teks hitam */
 }
 
+/* styling paragraph di dalam intro */
 .intro p {
   max-width: 440px;
+  /* lebar maksimal paragraf */
   font-size: 18px;
+  /* ukuran font */
   line-height: 32px;
+  /* tinggi baris */
   text-wrap: balance;
+  /* seimbangkan panjang baris */
   color: var(--text-secondary);
+  /* warna abu-abu */
 }
 
+/* styling link di dalam intro */
 .intro a {
   font-weight: 500;
+  /* ketebalan medium */
   color: var(--text-primary);
+  /* warna hitam */
 }
 
+/* ===== CTA BUTTONS (TOMBOL AKSI) ===== */
+/* .ctas = container deretan tombol */
 .ctas {
   display: flex;
+  /* mode flexbox */
   flex-direction: row;
+  /* tombol berjejer horizontal */
   width: 100%;
+  /* lebar penuh */
   max-width: 440px;
+  /* tapi maksimal 440px */
   gap: 16px;
+  /* jarak antar tombol */
   font-size: 14px;
+  /* ukuran font tombol */
 }
 
+/* styling untuk setiap tombol CTA */
 .ctas a {
   display: flex;
+  /* flexbox untuk centering isi tombol */
   justify-content: center;
+  /* center horizontal */
   align-items: center;
+  /* center vertikal */
   height: 40px;
+  /* tinggi tombol */
   padding: 0 16px;
+  /* padding kiri-kanan */
   border-radius: 128px;
+  /* sangat bulat (pill shape) */
   border: 1px solid transparent;
+  /* border transparan default */
   transition: 0.2s;
+  /* animasi halus 200ms */
   cursor: pointer;
+  /* cursor tangan saat hover */
   width: fit-content;
+  /* lebar sesuai isi */
   font-weight: 500;
+  /* ketebalan medium */
 }
 
+/* tombol utama (primary) - warna gelap */
 a.primary {
   background: var(--text-primary);
+  /* latar belakang hitam */
   color: var(--background);
+  /* teks putih */
   gap: 8px;
+  /* jarak ikon dan teks */
 }
 
+/* tombol sekunder - hanya border */
 a.secondary {
   border-color: var(--button-secondary-border);
+  /* tampilkan border abu-abu */
 }
 
-/* Enable hover only on non-touch devices */
+/* ===== HOVER EFFECTS ===== */
+/* hover hanya aktif di perangkat non-touch (desktop dengan mouse) */
+/* @media (hover: hover) = perangkat yang support hover */
+/* (pointer: fine) = perangkat dengan pointer presisi (mouse, bukan jari) */
 @media (hover: hover) and (pointer: fine) {
+
+  /* hover tombol primary: warna jadi lebih gelap */
   a.primary:hover {
     background: var(--button-primary-hover);
     border-color: transparent;
   }
 
+  /* hover tombol secondary: background abu-abu muda */
   a.secondary:hover {
     background: var(--button-secondary-hover);
     border-color: transparent;
   }
 }
 
+/* ===== RESPONSIVE DESIGN (MOBILE) ===== */
+/* @media max-width 600px = layar lebih kecil dari 600px (HP) */
 @media (max-width: 600px) {
+
+  /* kurangi padding di mobile */
   .main {
     padding: 48px 24px;
+    /* padding lebih kecil di mobile */
   }
 
+  /* kurangi gap di intro */
   .intro {
     gap: 16px;
+    /* jarak lebih rapat di mobile */
   }
 
+  /* perkecil font h1 di mobile */
   .intro h1 {
     font-size: 32px;
+    /* lebih kecil dari desktop */
     line-height: 40px;
+    /* tinggi baris menyesuaikan */
     letter-spacing: -1.92px;
+    /* jarak huruf menyesuaikan */
   }
 }
 
+/* ===== DARK MODE ===== */
+/* ganti warna saat user pakai dark mode di OS-nya */
 @media (prefers-color-scheme: dark) {
+
+  /* logo di-invert (putih jadi hitam, hitam jadi putih) */
   .logo {
     filter: invert();
+    /* balikkan warna logo */
   }
 
+  /* ganti semua variabel warna ke versi gelap */
   .page {
     --background: #000;
+    /* latar belakang hitam */
     --foreground: #000;
+    /* foreground hitam */
 
     --text-primary: #ededed;
+    /* teks terang */
     --text-secondary: #999;
+    /* teks sekunder abu-abu */
 
     --button-primary-hover: #ccc;
+    /* hover primary terang */
     --button-secondary-hover: #1a1a1a;
+    /* hover secondary gelap */
     --button-secondary-border: #1a1a1a;
+    /* border secondary gelap */
   }
 }

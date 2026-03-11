@@ -1,18 +1,41 @@
+/**
+ * ============================================================================
+ * SIGNIN PAGE - src/app/signin/page.js
+ * ============================================================================
+ * Halaman login (/signin) yang menggabungkan AuthLayout dan SignInPageView.
+ * 
+ * Ini adalah Server Component (default di Next.js 13+).
+ * Tugasnya sederhana: menggabungkan layout dan form login.
+ * 
+ * Struktur:
+ * AuthLayout (background + logo + card putih)
+ *   └── SignInPageView (form username + password + tombol login)
+ * 
+ * @module SignInPage
+ * @path /signin
+ * ============================================================================
+ */
+
 // import komponen layout khusus untuk halaman autentikasi (login/register)
-// authlayout ini biasanya punya styling berbeda dari dashboard
+// AuthLayout menyediakan background abu-abu, logo, dan card putih
 import { AuthLayout } from "@/components/layouts/auth-layout";
 
-// import komponen view halaman sign in yang berisi form username dan password
+// import komponen form login (Client Component yang handle interaksi user)
 import { SignInPageView } from "@/components/auth/sign-in-page";
 
-// fungsi utama halaman signin, ini yang di-render saat user buka /signin
+/**
+ * Page - Halaman Login FlashPark
+ * 
+ * Menggabungkan AuthLayout sebagai wrapper dan SignInPageView sebagai konten.
+ * 
+ * @returns {JSX.Element} - Layout autentikasi berisi form login
+ */
 export default function Page() {
   return (
-    // authlayout membungkus seluruh halaman login dengan styling khusus
+    // AuthLayout = wrapper dengan background, logo, dan card putih
     <AuthLayout>
-      {/* signinpageview adalah form login yang sebenarnya */}
+      {/* SignInPageView = form login (username, password, tombol submit) */}
       <SignInPageView />
     </AuthLayout>
   );
 }
-

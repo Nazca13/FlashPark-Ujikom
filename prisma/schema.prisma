@@ -1,88 +1,151 @@
+// ============================================================================
+// PRISMA SCHEMA - prisma/schema.prisma
+// ============================================================================
+// File ini adalah "blueprint" (cetakan) database aplikasi FlashPark.
+// Prisma membaca file ini untuk:
+// 1. Membuat tabel di database PostgreSQL (prisma migrate)
+// 2. Membuat fungsi-fungsi query otomatis (prisma generate)
+//
+// Setiap "model" di bawah = 1 tabel di database
+// Setiap field di dalam model = 1 kolom di tabel tersebut
+//
+// @module PrismaSchema
+// ============================================================================
+
+// ===== GENERATOR CLIENT =====
+// generator = konfigurasi untuk generate Prisma Client
+// Prisma Client adalah library yang kita pakai untuk query database dari kode JS
 generator client {
-  provider = "prisma-client-js"
-  previewFeatures = ["driverAdapters"]
+  provider = "prisma-client-js"         // gunakan generator JavaScript
+  previewFeatures = ["driverAdapters"]   // fitur preview: support custom database driver (pg adapter)
 }
 
+// ===== DATASOURCE (KONEKSI DATABASE) =====
+// datasource = konfigurasi koneksi ke database
 // CUKUP SATU SAJA DI SINI
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DATABASE_URL") // Opsional, bagus untuk Prisma v7
+  provider  = "postgresql"              // jenis database: PostgreSQL
+  url       = env("DATABASE_URL")       // URL koneksi diambil dari file .env
+  directUrl = env("DATABASE_URL")       // URL langsung (tanpa connection pooler), opsional untuk Prisma v7
 }
 
+// ============================================================================
+// MODEL: tb_transaksi (Tabel Transaksi Parkir)
+// ============================================================================
+// Menyimpan setiap transaksi kendaraan yang masuk dan keluar parkir.
+// Ini adalah tabel utama yang mencatat semua aktivitas parkir.
 model tb_transaksi {
-  id_parkir      Int            @id @default(autoincrement())
-  plat_nomor     String         @db.VarChar(20)
-  id_tarif       Int
-  id_user        Int            // Petugas yang melayani
-  id_area        Int            // Area parkir
-  waktu_masuk    DateTime       @default(now())
-  waktu_keluar   DateTime?
-  biaya_total    Decimal?       @db.Decimal(10, 0)
-  status         String         @default("masuk") @db.VarChar(20)
+  id_parkir      Int            @id @default(autoincrement())   // ID unik transaksi, auto increment (1, 2, 3, ...)
+  plat_nomor     String         @db.VarChar(20)                 // plat nomor kendaraan, maks 20 karakter (contoh: "D 1234 ABC")
+  id_tarif       Int                                            // ID jenis tarif (motor/mobil/dll), referensi ke tb_tarif
+  id_user        Int                                            // ID petugas yang melayani transaksi ini
+  id_area        Int                                            // ID area parkir tempat kendaraan diparkir
+  waktu_masuk    DateTime       @default(now())                 // waktu kendaraan masuk, default = waktu saat data dibuat
+  waktu_keluar   DateTime?                                      // waktu kendaraan keluar (? = boleh kosong/null, karena belum keluar)
+  biaya_total    Decimal?       @db.Decimal(10, 0)              // total biaya parkir (? = null saat belum checkout), 10 digit tanpa desimal
+  status         String         @default("masuk") @db.VarChar(20) // status transaksi: "masuk" atau "keluar"
    
-  // Relasi
-  tb_tarif       tb_tarif       @relation(fields: [id_tarif], references: [id_tarif])
-  tb_user        tb_user        @relation(fields: [id_user], references: [id_user])
-  tb_area_parkir tb_area_parkir @relation(fields: [id_area], references: [id_area])
+  // ===== RELASI (Hubungan Antar Tabel) =====
+  // Prisma otomatis bikin JOIN query berdasarkan relasi ini
+  tb_tarif       tb_tarif       @relation(fields: [id_tarif], references: [id_tarif])       // relasi ke tabel tarif (untuk ambil info jenis kendaraan & harga)
+  tb_user        tb_user        @relation(fields: [id_user], references: [id_user])         // relasi ke tabel user (untuk ambil info petugas)
+  tb_area_parkir tb_area_parkir @relation(fields: [id_area], references: [id_area])         // relasi ke tabel area (untuk ambil info lokasi parkir)
 }
 
+// ============================================================================
+// MODEL: tb_area_parkir (Tabel Area/Zona Parkir)
+// ============================================================================
+// Menyimpan informasi area/zona parkir beserta kapasitas dan status terisi.
+// Contoh: "Zona A" kapasitas 50 slot, terisi 30.
 model tb_area_parkir {
-  id_area      Int            @id @default(autoincrement())
-  nama_area    String         @db.VarChar(50)
-  kapasitas    Int
-  terisi       Int?           @default(0)
-  is_active    Boolean        @default(true)  // status aktif/nonaktif
+  id_area      Int            @id @default(autoincrement())     // ID unik area, auto increment
+  nama_area    String         @db.VarChar(50)                   // nama area parkir (contoh: "Zona A", "Lantai 1")
+  kapasitas    Int                                              // total slot parkir yang tersedia di area ini
+  terisi       Int?           @default(0)                       // jumlah slot yang terisi saat ini (? = nullable, default 0)
+  is_active    Boolean        @default(true)                    // status area: true = aktif (bisa dipakai), false = nonaktif
    
-  // Relasi balik
-  tb_transaksi tb_transaksi[]
+  // ===== RELASI BALIK =====
+  // relasi balik ke transaksi: satu area bisa punya banyak transaksi
+  tb_transaksi tb_transaksi[]  // array transaksi yang terjadi di area ini
 }
 
+// ============================================================================
+// MODEL: tb_tarif (Tabel Tarif Parkir)
+// ============================================================================
+// Menyimpan daftar jenis kendaraan beserta tarif per jam-nya.
+// Contoh: Motor = Rp 2.000/jam, Mobil = Rp 5.000/jam
 model tb_tarif {
-  id_tarif        Int            @id @default(autoincrement())
-  jenis_kendaraan String         @db.VarChar(20)
-  tarif_per_jam   Decimal        @db.Decimal(10, 0)
+  id_tarif        Int            @id @default(autoincrement())  // ID unik tarif, auto increment
+  jenis_kendaraan String         @db.VarChar(20)                // jenis kendaraan (contoh: "Motor", "Mobil", "Truk")
+  tarif_per_jam   Decimal        @db.Decimal(10, 0)             // harga parkir per jam dalam Rupiah (10 digit, tanpa desimal)
    
-  tb_transaksi    tb_transaksi[]
+  // ===== RELASI BALIK =====
+  tb_transaksi    tb_transaksi[] // satu tarif bisa dipakai di banyak transaksi
 }
 
+// ============================================================================
+// MODEL: tb_user (Tabel Pengguna/User)
+// ============================================================================
+// Menyimpan data semua pengguna sistem: admin, petugas, dan owner.
+// Data ini dipakai untuk login dan tracking siapa yang melakukan transaksi.
 model tb_user {
-  id_user          Int                @id @default(autoincrement())
-  nama_lengkap     String             @db.VarChar(50)
-  username         String             @unique @db.VarChar(50)
-  password         String             @db.VarChar(100)
-  status_aktif     Int?               @default(1) @db.SmallInt
-  role             user_role          @default(petugas)
+  id_user          Int                @id @default(autoincrement()) // ID unik user, auto increment
+  nama_lengkap     String             @db.VarChar(50)               // nama lengkap user (contoh: "Budi Santoso")
+  username         String             @unique @db.VarChar(50)       // username untuk login, HARUS UNIK (tidak boleh sama)
+  password         String             @db.VarChar(100)              // password user (disimpan plain text untuk ujikom)
+  status_aktif     Int?               @default(1) @db.SmallInt      // status aktif: 1 = aktif, 0 = nonaktif (? = nullable)
+  role             user_role          @default(petugas)              // role/jabatan user, default = petugas (lihat enum di bawah)
    
-  // Relasi Balik
-  tb_transaksi     tb_transaksi[]
-  tb_kendaraan     tb_kendaraan[]
-  tb_log_aktivitas tb_log_aktivitas[]
+  // ===== RELASI BALIK =====
+  tb_transaksi     tb_transaksi[]     // transaksi yang dilayani oleh user ini
+  tb_kendaraan     tb_kendaraan[]     // kendaraan yang terdaftar oleh user ini
+  tb_log_aktivitas tb_log_aktivitas[] // log aktivitas yang dilakukan user ini
 }
 
+// ============================================================================
+// MODEL: tb_kendaraan (Tabel Data Kendaraan)
+// ============================================================================
+// Menyimpan data kendaraan yang pernah terdaftar di sistem.
+// Bisa dipakai untuk riwayat kendaraan yang sering parkir.
 model tb_kendaraan {
-  id_kendaraan    Int       @id @default(autoincrement())
-  plat_nomor      String    @unique @db.VarChar(15)
-  jenis_kendaraan String    @db.VarChar(20)
-  warna           String?   @db.VarChar(20)
-  pemilik         String?   @db.VarChar(100)
-  id_user         Int?      
-  created_at      DateTime? @default(now()) @db.Timestamp(6)
+  id_kendaraan    Int       @id @default(autoincrement())   // ID unik kendaraan, auto increment
+  plat_nomor      String    @unique @db.VarChar(15)         // plat nomor, HARUS UNIK (contoh: "D 1234 ABC")
+  jenis_kendaraan String    @db.VarChar(20)                 // jenis kendaraan (Motor/Mobil/dll)
+  warna           String?   @db.VarChar(20)                 // warna kendaraan (opsional, boleh kosong)
+  pemilik         String?   @db.VarChar(100)                // nama pemilik kendaraan (opsional)
+  id_user         Int?                                      // ID user yang mendaftarkan (opsional)
+  created_at      DateTime? @default(now()) @db.Timestamp(6) // waktu data dibuat, presisi 6 digit
     
+  // ===== RELASI =====
+  // onDelete: NoAction = kalau user dihapus, data kendaraan tetap ada
+  // onUpdate: NoAction = kalau user diupdate, referensi tidak berubah
   tb_user         tb_user?  @relation(fields: [id_user], references: [id_user], onDelete: NoAction, onUpdate: NoAction)
 }
 
+// ============================================================================
+// MODEL: tb_log_aktivitas (Tabel Log Aktivitas Sistem)
+// ============================================================================
+// Mencatat semua aktivitas penting yang dilakukan user di sistem.
+// Contoh: "Login ke sistem", "Check-In Kendaraan: D 1234 ABC", "Logout dari sistem"
 model tb_log_aktivitas {
-  id_log          Int       @id @default(autoincrement())
-  id_user         Int
-  aktivitas       String    @db.VarChar(100)
-  waktu_aktivitas DateTime? @default(now()) @db.Timestamp(6)
+  id_log          Int       @id @default(autoincrement())       // ID unik log, auto increment
+  id_user         Int                                           // ID user yang melakukan aktivitas
+  aktivitas       String    @db.VarChar(100)                    // deskripsi aktivitas yang dilakukan
+  waktu_aktivitas DateTime? @default(now()) @db.Timestamp(6)    // waktu aktivitas terjadi
 
+  // ===== RELASI =====
+  // onDelete: Cascade = kalau user dihapus, semua log-nya ikut terhapus
+  // onUpdate: NoAction = kalau user diupdate, referensi tidak berubah
   tb_user         tb_user   @relation(fields: [id_user], references: [id_user], onDelete: Cascade, onUpdate: NoAction)
 }
 
+// ============================================================================
+// ENUM: user_role (Daftar Role/Jabatan User)
+// ============================================================================
+// Enum = tipe data yang nilainya terbatas pada pilihan tertentu.
+// Hanya 3 role yang diizinkan di sistem FlashPark:
 enum user_role {
-  admin
-  petugas
-  owner
+  admin    // admin: bisa kelola semua data (user, tarif, area, log)
+  petugas  // petugas: bisa proses check-in dan check-out kendaraan
+  owner    // owner: bisa lihat laporan pendapatan dan grafik keuangan
 }

@@ -1,71 +1,113 @@
-// "use client" = komponen ini jalan di browser user (butuh interaksi)
+/**
+ * ============================================================================
+ * SIGN-IN PAGE VIEW - src/components/auth/sign-in-page.js
+ * ============================================================================
+ * Komponen form login FlashPark (Client Component).
+ * Menampilkan form dengan input username, password, dan tombol "Masuk Sekarang".
+ * 
+ * Fitur:
+ * - Toggle show/hide password (ikon mata)
+ * - Validasi server-side (username & password dicek di server)
+ * - Error message ditampilkan kalau login gagal
+ * - Auto-disable saat loading (isPending)
+ * 
+ * Pattern: React useActionState + Next.js Server Action
+ * - Form submit langsung memanggil loginAction di server
+ * - Server return { error: "..." } kalau gagal, atau redirect kalau berhasil
+ * 
+ * @module SignInPageView
+ * @path /signin
+ * ============================================================================
+ */
+
+// "use client" = komponen ini jalan di browser user (butuh interaksi: ketik, klik)
 "use client";
 
-// useFormState = hook dari react buat handle state form + server action
+// import useActionState = hook React 19 untuk menghubungkan form ke server action
+// useState = hook React untuk state lokal (toggle password)
 import { useActionState, useState } from "react";
+
+// import Image dari Next.js untuk menampilkan ikon toggle password
 import Image from "next/image";
 
-// import fungsi loginAction dari file actions.js
+// import server action loginAction dari fitur autentikasi
+// loginAction menangani logika login (cek database, set cookie, redirect)
 import { loginAction } from "@/features/authentication/actions";
 
-// import styling css module
+// import CSS Module untuk styling form login
 import styles from "./sign-in-page.module.css";
 
-// state awal, error masih kosong
+// ===== STATE AWAL =====
+// initialState = state form sebelum user interaksi (error masih kosong)
 const initialState = {
-    error: "",
+    error: "",    // pesan error login (kosong = belum ada error)
 };
 
-// komponen utama halaman login
+/**
+ * SignInPageView - Komponen Form Login
+ * 
+ * @returns {JSX.Element} - Form login dengan username, password, dan tombol submit
+ */
 export function SignInPageView() {
-    // useActionState nge-connect form kita ke server action
-    // state = isinya error message (kalo ada)
-    // formAction = fungsi yg dipanggil pas form di-submit
-    // isPending = status loading
+    // ===== SETUP HOOKS =====
+
+    // useActionState = hook yang menghubungkan form ke server action (loginAction)
+    // state = object berisi error message dari server (jika login gagal)
+    // formAction = fungsi yang dipanggil saat form di-submit
+    // isPending = boolean, true saat form sedang diproses oleh server
     const [state, formAction, isPending] = useActionState(loginAction, initialState);
-    const [showPassword, setShowPassword] = useState(false);
+
+    // state lokal untuk toggle show/hide password
+    const [showPassword, setShowPassword] = useState(false); // false = password tersembunyi (default)
 
     return (
-        // container utama halaman login
+        // container utama form login (centered oleh AuthLayout)
         <div className={styles.container}>
-            {/* judul halaman */}
+
+            {/* ===== JUDUL ===== */}
             <h1 className={styles.title}>Masuk ke FlashPark</h1>
-            {/* sub judul */}
+
+            {/* ===== SUB JUDUL ===== */}
             <p className={styles.subtitle}>Sistem Manajemen Parkir Modern</p>
 
-            {/* form login, action-nya langsung ke server */}
+            {/* ===== FORM LOGIN ===== */}
+            {/* action={formAction} = saat submit, langsung kirim ke server action */}
             <form action={formAction} className={styles.form}>
-                {/* input username */}
+
+                {/* ===== INPUT USERNAME ===== */}
                 <div className={styles.inputGroup}>
                     <label htmlFor="username" className={styles.label}>Username</label>
                     <input
                         id="username"
-                        name="username" // name ini penting, diambil di server pake formData.get("username")
+                        name="username"                    // name penting! di server diambil: formData.get("username")
                         type="text"
                         placeholder="Masukkan username"
-                        required // wajib diisi
+                        required                           // wajib diisi (HTML5 validation)
                         className={styles.input}
                     />
                 </div>
 
-                {/* input password */}
+                {/* ===== INPUT PASSWORD ===== */}
                 <div className={styles.inputGroup}>
                     <label htmlFor="password" className={styles.label}>Password</label>
                     <div className={styles.passwordWrapper}>
                         <input
                             id="password"
                             name="password"
-                            type={showPassword ? "text" : "password"} // toggle type
+                            type={showPassword ? "text" : "password"}  // toggle: text = terlihat, password = tersembunyi
                             placeholder="Masukkan password"
                             required
                             className={styles.input}
                         />
+                        {/* ===== TOMBOL TOGGLE SHOW/HIDE PASSWORD ===== */}
                         <button
-                            type="button"
+                            type="button"                              // type="button" agar tidak submit form
                             className={styles.passwordToggle}
-                            onClick={() => setShowPassword(!showPassword)}
+                            onClick={() => setShowPassword(!showPassword)}  // balik state showPassword
                             aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
+                        // aria-label = label untuk screen reader (aksesibilitas)
                         >
+                            {/* ikon mata: berubah sesuai state showPassword */}
                             <Image
                                 src={showPassword ? "/content/password-on.svg" : "/content/password-off.svg"}
                                 alt={showPassword ? "Hide password" : "Show password"}
@@ -76,14 +118,17 @@ export function SignInPageView() {
                     </div>
                 </div>
 
-                {/* kalo ada error dari server, tampilin di sini */}
+                {/* ===== ERROR MESSAGE ===== */}
+                {/* Hanya muncul kalau ada error dari server (state.error tidak kosong) */}
+                {/* ?. = optional chaining: cegah error kalau state null */}
                 {state?.error && (
                     <div className={styles.error}>
                         {state.error}
                     </div>
                 )}
 
-                {/* tombol submit */}
+                {/* ===== TOMBOL SUBMIT ===== */}
+                {/* type="submit" = saat diklik, form di-submit ke server action */}
                 <button type="submit" className={styles.button}>
                     Masuk Sekarang
                 </button>

@@ -1,36 +1,80 @@
+/**
+ * ============================================================================
+ * AUTH LAYOUT CSS - src/components/layouts/auth-layout/styles.module.css
+ * ============================================================================
+ * Styling untuk layout halaman login.
+ * Menampilkan card putih di tengah layar dengan background abu-abu.
+ * 
+ * @module AuthLayoutStyles
+ * ============================================================================
+ */
+
+/* ===== CONTAINER UTAMA ===== */
+/* .container = seluruh halaman login */
 .container {
     min-height: 100vh;
+    /* setinggi layar penuh */
     display: flex;
+    /* mode flexbox untuk centering */
     flex-direction: column;
+    /* susun vertikal (logo di atas, card di bawah) */
     align-items: center;
+    /* center horizontal */
     justify-content: center;
+    /* center vertikal */
     background-color: #F2F3F7;
+    /* warna latar belakang abu-abu terang */
     font-family: sans-serif;
+    /* font sans-serif default */
     padding: 20px;
+    /* padding agar di mobile tidak nempel ke pinggir */
 }
 
+/* ===== HEADER (TEMPAT LOGO) ===== */
+/* .header = area logo di atas card */
 .header {
     display: flex;
+    /* flexbox */
     align-items: center;
+    /* center vertikal */
     justify-content: center;
+    /* center horizontal */
     margin-bottom: 30px;
+    /* jarak ke card di bawah */
     width: 100%;
+    /* lebar penuh */
 }
 
+/* ===== CONTAINER LOGO ===== */
+/* .logoContainer = wrapper untuk gambar logo */
 .logoContainer {
     position: relative;
+    /* relatif karena Image Next.js pakai fill (absolute) */
     width: 180px;
+    /* lebar logo */
     height: 60px;
+    /* tinggi logo */
 }
 
+/* ===== CARD PUTIH ===== */
+/* .card = card berisi form login */
 .card {
     background-color: #FFFFFF;
+    /* putih */
     width: 100%;
+    /* lebar penuh */
     max-width: 450px;
+    /* tapi maksimal 450px */
     border-radius: 16px;
+    /* sudut membulat */
     padding: 40px;
+    /* padding di dalam card */
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    /* shadow halus untuk efek mengambang */
     display: flex;
+    /* flexbox */
     flex-direction: column;
+    /* susun konten vertikal */
     align-items: center;
+    /* center konten horizontal */
 }
